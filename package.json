@@ -1,0 +1,38 @@
+{
+  "name": "rbac-a",
+  "description": "RBAC-A dynamic plugin roles implementation",
+  "version": "0.1.0",
+  "author": "Yanick Rochon <yanick.rochon@gmail.com>",
+  "keywords": [
+    "rbac",
+    "abac",
+    "rbac-a",
+    "role",
+    "access",
+    "control",
+    "attribute",
+    "dynamic",
+    "security"
+  ],
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "homepage": "https://github.com/yanickrochon/rbac-a#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanickrochon/rbac-a.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yanickrochon/rbac-a/issues"
+  },
+  "dependencies": {
+    "error-factory": "^0.1.6"
+  },
+  "devDependencies": {
+    "istanbul": "^0.4.1",
+    "mocha": "^2.3.4",
+    "should": "^8.0.2"
+  },
+  "license": "MIT"
+}
