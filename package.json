@@ -14,7 +14,7 @@
     "dynamic",
     "security"
   ],
-  "main": "lib/index.js",
+  "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
@@ -27,7 +27,8 @@
     "url": "https://github.com/yanickrochon/rbac-a/issues"
   },
   "dependencies": {
-    "error-factory": "^0.1.6"
+    "error-factory": "^0.1.6",
+    "promise-events": "0.0.8"
   },
   "devDependencies": {
     "istanbul": "^0.4.1",
