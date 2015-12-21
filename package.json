@@ -16,7 +16,9 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "test-cov": "istanbul cover _mocha",
+    "test-travis": "istanbul cover _mocha --report lcovonly"
   },
   "homepage": "https://github.com/yanickrochon/rbac-a#readme",
   "repository": {

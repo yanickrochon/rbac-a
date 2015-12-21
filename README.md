@@ -27,19 +27,27 @@ rbac.on('error', function (err) {
   console.error('Error while checking $s/%s for %s : %s', err.role, err.user, err.permissions, err.message);
 })
 
-rbac.check(user, 'create').then(function () {
-  console.log('User can create!');
-}).catch(function () {
-  console.log('User cannot create.');
-  console.info('Please contact your system admin for more information');
+rbac.check(user, 'create').then(function (allowed) {
+  if (allowed) {
+    console.log('User can create!');
+  } else {
+    console.log('User cannot create.');
+    console.info('Please contact your system admin for more information');
+  }
+}).catch(function (err) {
+  console.error(err && err.stack || err || 'ERROR');
 });
 
 // specify attributes arguments
-rbac.check(user, 'edit', { time: Date.now() }).then(function () {
-  console.log('User can edit!');
-}).catch(function () {
-  console.log('User cannot edit.');
-  console.info('Please contact your system admin for more information');
+rbac.check(user, 'edit', { time: Date.now() }).then(function (allowed) {
+  if (allowed) {
+    console.log('User can edit!');
+  } else {
+    console.log('User cannot edit.');
+    console.info('Please contact your system admin for more information');
+  }
+}).catch(function (err) {
+  console.error(err && err.stack || err || 'ERROR');
 });
 
 ```
@@ -176,12 +184,14 @@ Any uncaught error thrown will emit an `error` event via the `RBAC` instance. Th
 
 The RBAC system is *not* about restricting users, but seeing if a user possess the required permissions or not. However, implementing an allow/deny system is quite trival. In fact, `rbac.check` resolves with a numeric value representing the depth or role inheritance that matched the desired permissions. Lower values have higher priority (i.e. weight). For example :
 
-```
+```javascript
 function allowDeny(user, allowedPermissions, deniedPermissions, params) {
   function check(permissions) {
     // handle catch separately to prevent failing prematurely. The promise
-    // will always resolve with a boolean
-    return permissions && rbac.check(user, permissions, params).catch(function () {
+    // will always resolve with a numeric value
+    return permissions && rbac.check(user, permissions, params).then(function (allowed) {
+      return allowed || Infinity;
+    }).catch(function () {
       // Infinity is the highest possible value (or lowest possible priority)
       return Infinity;
     }) || Infinity;
