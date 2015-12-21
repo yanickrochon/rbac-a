@@ -12,12 +12,16 @@ npm i rbac-a --save
 ## Usage
 
 ```javascript
-var RBAC = require('rbac-a');
+const RBAC = require('rbac-a');
+
+const UserDbProvider = require('./path/to/user-db-provider');
 
 var rbac = new RBAC();
 
-rbac.addProvider(new RBAC.providers.Json(require('/path/to/json')));
-rbac.setAttribute(require('/path/to/attribute'));
+rbac.addProvider(new RBAC.providers.Json(require('./path/to/roles')));
+rbac.addProvider(new UserDbProvider(require('./path/to/db-config')));
+
+rbac.setAttribute(require('./path/to/attribute'));
 
 rbac.on('error', function (err) {
   console.error('Error while checking $s/%s for %s : %s', err.role, err.user, err.permissions, err.message);
@@ -39,7 +43,6 @@ rbac.check(user, 'edit', { time: Date.now() }).then(function () {
 });
 
 ```
-
 
 ```javascript
 // /path/to/attribute.js
@@ -90,15 +93,13 @@ module.exports = {
     }
   },
   'users': {
-    '0': ['admin'],
-    '123': ['director'],
-    '222': ['editor'],
-    '333': ['editor', 'reader']
+    // note : no users here, they are in a DB! If there were
+    //        any user, they would be in the form of
+    //           'user': ['list','of','roles']
+    //        where `user` is the value passed to `provider.getRoles(user)`
   }
 };
 ```
-
-Roles are always restrictive. Any provider specifying a role's permission that restrict will override any previous rule, unless the access was granted by a descendant of that role.
 
 
 ## Users
@@ -169,6 +170,43 @@ Attribute functions may return a thruthy value if all conditions succeed, meanin
 An inactive role discards all inheriting roles for the specified user.
 
 Any uncaught error thrown will emit an `error` event via the `RBAC` instance. The error will be extended with the specified `user`, current `role`, and `permissions`.
+
+
+## Applications
+
+The RBAC system is *not* about restricting users, but seeing if a user possess the required permissions or not. However, implementing an allow/deny system is quite trival. In fact, `rbac.check` resolves with a numeric value representing the depth or role inheritance that matched the desired permissions. Lower values have higher priority (i.e. weight). For example :
+
+```
+function allowDeny(user, allowedPermissions, deniedPermissions, params) {
+  function check(permissions) {
+    // handle catch separately to prevent failing prematurely. The promise
+    // will always resolve with a boolean
+    return permissions && rbac.check(user, permissions, params).catch(function () {
+      // Infinity is the highest possible value (or lowest possible priority)
+      return Infinity;
+    }) || Infinity;
+  }
+
+  return Promise.all([
+    check(allowedPermissions),
+    check(deniedPermissions)
+  ]).then(function (results) {
+    // Note: if both are equal, then the rule failed
+    if (results[0] < results[1]) {
+      return true;                    // resolve next
+    } else {
+      throw new Error('Restricted');  // reject next
+    }
+  });
+}
+
+
+allowDeny(user, 'writer', 'auditor').then(function () {
+  console.log('User is a writer and NOT an auditor');
+}, function () {
+  console.log('User is a writer but auditors are restricted');
+})
+```
 
 
 ## Contribution
