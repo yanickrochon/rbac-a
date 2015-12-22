@@ -21,7 +21,7 @@ var rbac = new RBAC();
 rbac.addProvider(new RBAC.providers.Json(require('./path/to/roles')));
 rbac.addProvider(new UserDbProvider(require('./path/to/db-config')));
 
-rbac.setAttribute(require('./path/to/attribute'));
+rbac.getAttributesManager().set(require('./path/to/attribute'));
 
 rbac.on('error', function (err) {
   console.error('Error while checking $s/%s for %s : %s', err.role, err.user, err.permissions, err.message);
