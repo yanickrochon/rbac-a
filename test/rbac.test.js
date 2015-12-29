@@ -50,7 +50,7 @@ describe('Test RBAC', function () {
 
 
   describe('Testing provider', function () {
-    
+
     class MockProvider extends Provider {
       getRoles(user) {}
       getPermissions(role) {}
@@ -145,48 +145,102 @@ describe('Test RBAC', function () {
 
 
   describe('Testing checking permissions', function () {
+    /*
     const rules = {
       'admin': {
-        'permissions': ['chuck.norris'],
-        'inherited': ['guest']
+        'permissions': ['chuck.norris']
       },
       'tester': {
-        'permissions': ['test'],
+        'permissions': ['test','read']
       },
       'guest': {
-        //'permissions': [],
-        'inherited': ['dummy']
+        'permissions': ['read']
       },
       'dummy': {
         'permissions': ['idle']
       }
     };
-
-    class MockProvider extends Provider {
-      getRoles(user) {
-        return [user];   // user == role for testing purposes
-      }
-      getPermissions(role) {
-        return 
-      }
-      getAttributes(role) {}
+    const users = {
+      'super': {'admin':1, 'tester':2, 'guest':3, 'dummy':4},
+      'admin': {'admin': 1, 'guest': 2},
+      'tester': {'tester': 1, 'dummy': 2},
+      'guest': {'guest': 1},
+      'dummy': {'dummy': 1}
     }
+    */
 
     it('should check basic permission', function () {
       let rbac = new RBAC();
-      let user = 1;
-      let permission = 'test';
+      let testUser = 'tester';
+      let testPermission = 'test';
+
+      class MockProvider extends Provider {
+        getRoles(user) {
+          user.should.equal(testUser);
+          return {'tester': 1, 'dummy': 2};
+        }
+        getPermissions(role) {
+          if (role === 'tester') {
+            return ['test', 'read'];
+          } else if (role === 'dummy') {
+            return ['idle'];
+          } else {
+            throw new Error('Invalid role : ' + role);
+          }
+        }
+        getAttributes(role) {}    // do not test attributes now
+      }
 
       rbac.addProvider(new MockProvider());
 
-      return rbac.check('tester', 'test').then(function (priority) {
+      return rbac.check(testUser, testPermission).then(function (priority) {
         priority.should.equal(1);
-
-      }, function () {
-        throw new Error('Assertion failed');
       });
 
     });
+
+    it('should fail if attribute unavailable', function () {
+      let rbac = new RBAC();
+      let testUser = 'tester';
+      let testPermission = 'test';
+
+      class MockProvider extends Provider {
+        getRoles(user) {
+          user.should.equal(testUser);
+          return {'tester': 1, 'dummy': 2};
+        }
+        getPermissions(role) {
+          if (role === 'tester') {
+            return ['test', 'read'];
+          } else if (role === 'dummy') {
+            return ['idle'];
+          } else {
+            throw new Error('Invalid role : ' + role);
+          }
+        }
+        getAttributes(role) {
+          if (role === 'tester') {
+            return ['testAttribute'];
+          } else if (role === 'dummy') {
+            return ['dummyAttribute'];
+          } else {
+            throw new Error('Invalid role : ' + role);
+          }
+        }    // do not test attributes now
+      }
+
+      rbac.addProvider(new MockProvider());
+
+      return rbac.check(testUser, testPermission).then(function (priority) {
+        priority.should.be.NaN();
+      });
+    });
+
+    it('should check if attribute is available');
+
+    it('should fail if missing role');
+
+    it('should fail if missing permission');
 
   });
 

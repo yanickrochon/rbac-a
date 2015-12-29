@@ -18,13 +18,11 @@ const UserDbProvider = require('./path/to/user-db-provider');
 
 var rbac = new RBAC();
 
-rbac.addProvider(new RBAC.providers.Json(require('./path/to/roles')));
-rbac.addProvider(new UserDbProvider(require('./path/to/db-config')));
-
-rbac.getAttributesManager().set(require('./path/to/attribute'));
+// ... add providers and setup AttributeManager if necessary
 
 rbac.on('error', function (err) {
-  console.error('Error while checking $s/%s for %s : %s', err.role, err.user, err.permissions, err.message);
+  console.error('Error while checking $s/%s', err.role, err.user);
+  console.error(err.stack);
 })
 
 rbac.check(user, 'create').then(function (allowed) {
@@ -49,101 +47,16 @@ rbac.check(user, 'edit', { time: Date.now() }).then(function (allowed) {
 }).catch(function (err) {
   console.error(err && err.stack || err || 'ERROR');
 });
-
 ```
 
-```javascript
-// /path/to/attribute.js
-module.exports = function dayShift(user, role, params) {
-  var time = params && new Date(params.time) || new Date();
+The method `rbac.check` will resolve with a numeric, non-zero, positive, integer value if the specified user is granted the specified permissions, or `NaN` otherwise.
 
-  return time && time.getHours() >= 7 && time.getHours() <= 17;
-};
-```
-
-```javascript
-// /path/to/json
-module.exports = {
-  'roles': {
-    'guest': {
-      //name: 'Guest'
-    },
-    'reader': {
-      //name: 'Reader',
-      'permissions': ['read'],
-      'inherited': ['guest']
-    },
-    'writer': {
-      //name: 'Writer',
-      'permissions': ['create'],
-      'inherited': ['reader']
-    },
-    'editor': {
-      //name: 'Editor',
-      'permissions': ['update'],
-      'inherited': ['reader'],
-      // user only has this role if attribute condition is met
-      'attributes': ['dayShift']
-    },
-    'director': {
-      //name: 'Director',
-      'permissions': ['delete'],
-      'inherited': ['reader', 'editor']
-    },
-    'auditor': {
-      //name: 'Auditor',
-      'permissions': ['audit']
-    },
-    'admin': {
-      //name: 'Administrator',
-      'permissions': ['manage'],
-      'inherited': ['director', 'auditor']
-    }
-  },
-  'users': {
-    // note : no users here, they are in a DB! If there were
-    //        any user, they would be in the form of
-    //           'user': ['list','of','roles']
-    //        where `user` is the value passed to `provider.getRoles(user)`
-  }
-};
-```
+If, for ever reason, the method should fail (i.e. the promise is rejected), then it should be considered equal as if it was resolved with `NaN`.
 
 
 ## Users
 
-When invoking `rbac.check`, the argument `user` is an arbitrary value that is only checked within the specified providers. For this reason, this value should normally be numeric or string. However, implementing custom providers, other data types and values may be passed to the function.
-
-
-## Rule inheritance
-
-Role inheritence is done from bottom to top, and evaluated from top to bottom. When declaring roles, a given role does not inherit from another role, but instead has declared roles inheriting from it.
-
-In the [usage](#usage) example, the roles are evaluated in a path, from left to right, starting at any given node, like so :
-
-```
-    
-               ┌── auditor
-    ── admin ──┤              ┌── editor? ──┐
-               └── director ──┤             ├── reader ── guest
-                              └── writer ───┘
-```
-
-**Note :** the `editor?` role depends if the specified attribute is active or not. If the rule's attribute is inactive, then all inheriting roles are ignored, unless explicitly specified within the user's membership. In the example above, if `editor`'s attribute is inactive, then user `333` would still be able to `read` as the role `reader` is explicitly specified whereas user `222` would not as it is only implicitly specified through the `editor` role's inheritance.
-
-
-### Cyclical inheritance
-
-No error will be emitted for cyclical inheritance. However, the validation
-will not search any deeper once a cycle is detected.
-
-
-## Super User Role (Administrator)
-
-This RBAC module does not have a built-in "administrator" role or permission. Such privileged role must be implemented by the application. This can be achieved with a role (ex: `admin`), which is not inherited (i.e. has no parent), but should be the parent of very other roles, with a special permission (ex: `manage`).
-
-This way, the special permission (ex: `manage`) can be assigned on other roles
-as well, if necessary.
+When invoking `rbac.check`, the argument `user` is an arbitrary value that is only checked within the specified providers. For this reason, this value should normally be numeric or string. However, when implementing custom providers, other data types and values may be passed to the function.
 
 
 ## Grouped permissions
@@ -160,6 +73,7 @@ The above example would validate if the user has *any* (i.e. `OR`) of the specif
 
 ```javascript
 rbac.check(userId, 'list&&read&&review').then(...);
+
 // mix OR / AND
 rbac.check(userId, 'post && update, read && delete').then(...);
 // is the same as
@@ -169,11 +83,11 @@ rbac.check(userId, ['post && update', 'read && delete']).then(...);
 
 ## Attributes
 
-Attributes determine if a role is active or not. If an attribute fails (returns a falsy value or is resolved with a falsy value, or is rejected), then the role is considered inactive and treated as if not part of the user's membership. A role with no attributes is always active.
+Attributes determine if a role is active or not. If an attribute fails (returns or resolves with a falsy value, or if an error is thrown), then the role is considered inactive and treated as if not part of the user's membership. A role with no attributes is always active.
 
 When checking permissions, `rbac.check` only allows passing one set of persistent and shared parameters that will be sent to any and all specified roles' attributes. And since attributes are business-specific, it is entirely to the implementing project to manage and handle any such parameters.
 
-Attribute functions may return a thruthy value if all conditions succeed, meaning that the role is active for the specified user, or a falsy value if the conditions are not met, meaning that the role is not active for the specified user. If an attribute throws an error, the condition will fail and the role will not be available.
+Attribute functions may return or resolve with a thruthy value if all conditions succeed, meaning that the role is active for the specified user, or a falsy value if the conditions are not met, meaning that the role is not active for the specified user. If an attribute throws an error, the condition will fail and the role will not be available.
 
 An inactive role discards all inheriting roles for the specified user.
 
