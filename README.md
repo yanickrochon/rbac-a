@@ -1,5 +1,10 @@
 # RBAC-A
 
+[![Build Status](https://travis-ci.org/yanickrochon/rbac-a.svg)](https://travis-ci.org/yanickrochon/rbac-a)
+[![Coverage Status](https://coveralls.io/repos/yanickrochon/rbac-a/badge.svg?branch=master)](https://coveralls.io/r/yanickrochon/rbac-a?branch=master)
+
+[![NPM](https://nodei.co/npm/rbac-a.png?compact=true)](https://nodei.co/npm/rbac-a/)
+
 Role Based Access Control with Attributes and dynamic plugin roles implementation
 
 ## Install
@@ -13,8 +18,6 @@ npm i rbac-a --save
 
 ```javascript
 const RBAC = require('rbac-a');
-
-const UserDbProvider = require('./path/to/user-db-provider');
 
 var rbac = new RBAC();
 
@@ -105,7 +108,7 @@ function allowDeny(user, allowedPermissions, deniedPermissions, params) {
     // will always resolve with a numeric value
     return permissions && rbac.check(user, permissions, params).then(function (allowed) {
       return allowed || Infinity;
-    }).catch(function () {
+    }, function () {
       // Infinity is the highest possible value (or lowest possible priority)
       return Infinity;
     }) || Infinity;
@@ -119,17 +122,107 @@ function allowDeny(user, allowedPermissions, deniedPermissions, params) {
     if (results[0] < results[1]) {
       return true;                    // resolve next
     } else {
-      throw new Error('Restricted');  // reject next
+      return false;
     }
   });
 }
 
 
-allowDeny(user, 'writer', 'auditor').then(function () {
-  console.log('User is a writer and NOT an auditor');
-}, function () {
-  console.log('User is a writer but auditors are restricted');
+allowDeny(user, 'writer', 'auditor').then(function (allowed) {
+  if (allowed) {
+    console.log('User is a writer and NOT an auditor');
+  } else {
+    console.log('User is a writer but auditors are restricted');
+  }
+}, function (err) {
+  console.error(err.stack);
 })
+```
+
+## Providers
+
+By default, all calls to the RBAC-A instance returns `NaN` (not allowed). To validate users against permissions, you must specify a provider extending the built-in class `Provider`. For example :
+
+```javascript
+'use strict';
+
+const Provider = require('rbac-a').Provider;
+
+class CustomProvider extends Provider {
+
+  /**
+  Return all the roles available for the given user. The return value
+  must be an object, recursively defining the associated roles for the
+  specified user. Return an empty object if user has no roles.
+
+  Ex: {
+        "role1": {
+          "role1.1": null,
+          "role1.2": { ... },
+          ...
+        },
+        "secondary": ...,
+        ...
+      }
+  
+  The method mey return a promise resolving with the
+  expected return value.
+
+  @param use {mixed}
+  @return {Object<string,number>}
+  */
+  getRoles(user) {
+    return {};   // TODO : implement stub
+  }
+
+  /**
+  Return all permissions for the specified role. The return value
+  must be an array. Return an empty array if role is missing or
+  no permission for the specified role.
+
+  Ex: ['permission1', 'permission2', ... ]
+
+  The method mey return a promise resolving with the
+  expected return value.
+
+  @param role {mixed}
+  @return {Array<string>}
+  */
+  getPermissions(role) {
+    return [];   // TODO : implement stub
+  }
+
+  /**
+  Return all attributes for the specified role. The return value must
+  be an array. Return an empty array if role is missing or if no
+  attributes for the specified role.
+
+  Ex: ['attribute1', 'attribute2', ... ]
+
+  The method mey return a promise resolving with the
+  expected return value.
+
+  @param role {mixed}
+  @return {Array<string>}
+  */
+  getAttributes(role) {
+    return [];   // TODO : implement stub
+  }
+
+}
+```
+
+### Built-in providers
+
+A default provider is implemented, using JSON as data source. 
+
+```javascript
+const RBAC = require('rbac-a');
+const JsonProvider = require('rbac-a/lib/providers/json');
+
+var rbac = new RBAC();
+
+rbac.addProvider(new JsonProvider('path/to/json'));
 ```
 
 
