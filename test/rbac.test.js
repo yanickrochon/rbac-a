@@ -254,6 +254,7 @@ describe('Test RBAC', function () {
     it('should check if attribute is available', function () {
       const rbac = new RBAC();
       const testUser = 'tester';
+      const testParams = { foo: 'bar', buz: true };
       const provider = new MockProvider(testUser);
       let testAttrCalled = false;
       let dummyAttrCalled = false;
@@ -261,7 +262,7 @@ describe('Test RBAC', function () {
       rbac.getAttributesManager().set(function testAttribute(user, role, params) {
         user.should.equal('tester');
         role.should.equal('tester');
-        (typeof params).should.equal('undefined');
+        params.should.equal(testParams);
         testAttrCalled = true;
         return true;
       });
@@ -269,36 +270,36 @@ describe('Test RBAC', function () {
       rbac.getAttributesManager().set(function dummyAttribute(user, role, params) {
         user.should.equal('tester');
         role.should.equal('dummy');
-        (typeof params).should.equal('undefined');
+        params.should.equal(testParams);
         dummyAttrCalled = true;
         return true;
       });
 
       rbac.addProvider(provider);
 
-      return rbac.check(testUser, 'test').then(function (priority) {
+      return rbac.check(testUser, 'test', testParams).then(function (priority) {
         priority.should.equal(1);
 
         testAttrCalled.should.be.true();
 
-        return rbac.check(testUser, ['test']).then(function (priority) {
+        return rbac.check(testUser, ['test'], testParams).then(function (priority) {
           priority.should.equal(1);
 
-          return rbac.check(testUser, [['test']]).then(function (priority) {
+          return rbac.check(testUser, [['test']], testParams).then(function (priority) {
             priority.should.equal(1);
           });
         });
       }).then(function () {
-        
-        return rbac.check(testUser, 'idle').then(function (priority) {
+
+        return rbac.check(testUser, 'idle', testParams).then(function (priority) {
           priority.should.equal(2);
 
           dummyAttrCalled.should.be.true();
 
-          return rbac.check(testUser, 'idle').then(function (priority) {
+          return rbac.check(testUser, 'idle', testParams).then(function (priority) {
             priority.should.equal(2);
 
-            return rbac.check(testUser, 'idle').then(function (priority) {
+            return rbac.check(testUser, 'idle', testParams).then(function (priority) {
               priority.should.equal(2);
             });
           });
@@ -336,7 +337,7 @@ describe('Test RBAC', function () {
 
       return rbac.check(testUser, 'missing').then(function (priority) {
         priority.should.be.NaN();
-      });   
+      });
     });
 
 
