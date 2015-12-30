@@ -1,7 +1,7 @@
 {
   "name": "rbac-a",
   "description": "RBAC-A dynamic plugin roles implementation",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "Yanick Rochon <yanick.rochon@gmail.com>",
   "keywords": [
     "rbac",

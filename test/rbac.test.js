@@ -307,6 +307,24 @@ describe('Test RBAC', function () {
       });
     });
 
+    it('should check if at least one valid role', function () {
+      const rbac = new RBAC();
+      const testUser = 'tester';
+      const provider = new MockProvider(testUser);
+
+      provider.getAttributes = function () {};  // ignore attributes
+
+      rbac.addProvider(provider);
+
+      return rbac.check(testUser, 'test, missing').then(function (priority) {
+        priority.should.equal(1);
+      }).then(function () {
+        return rbac.check(testUser, 'idle, missing').then(function (priority) {
+          priority.should.equal(2);
+        });
+      });
+    });
+
     it('should fail if missing role', function () {
       const rbac = new RBAC();
       const testUser = 'tester';
@@ -322,6 +340,10 @@ describe('Test RBAC', function () {
 
       return rbac.check(testUser, 'bar').then(function (priority) {
         priority.should.be.NaN();
+      }).then(function () {
+        return rbac.check(testUser, 'test && missing').then(function (priority) {
+          priority.should.be.NaN();
+        });
       });
     });
 
@@ -444,6 +466,42 @@ describe('Test RBAC', function () {
         errorThrown.should.be.true();
       });
     });
+
+    it('should fail if invalid permission', function () {
+      const rbac = new RBAC();
+      const provider = new MockProvider();
+      const invalid = [
+        // invalid types
+        undefined, null, false, true,
+        -1, 0, 1, NaN, Infinity,
+        {}, function () {}, /./, new Date()
+      ];
+      
+      rbac.addProvider(provider);
+
+      // simple permission
+      invalid.forEach(function (permissions) {
+        (function invalidPermission() { rbac.check('user', permissions); }).should.throw();
+      });
+
+      // permission group (OR)
+      (function invalidPermissionGroup() { rbac.check('user', ''); }).should.throw();
+      (function invalidPermissionGroup() { rbac.check('user', ','); }).should.throw();
+      (function invalidPermissionGroup() { rbac.check('user', []); }).should.throw();
+      invalid.forEach(function (permissions) {
+        (function invalidPermissionGroup() { rbac.check('user', [permissions]); }).should.throw();
+        (function invalidPermissionGroup() { rbac.check('user', [permissions,permissions]); }).should.throw();
+      });
+
+      // permission group (AND)
+      (function invalidPermissionGroup() { rbac.check('user', '&&'); }).should.throw();
+      (function invalidPermissionGroup() { rbac.check('user', ['&&']); }).should.throw();
+      invalid.forEach(function (permissions) {
+        (function invalidPermissionGroup() { rbac.check('user', [[permissions]]); }).should.throw();
+        (function invalidPermissionGroup() { rbac.check('user', [[permissions,permissions]]); }).should.throw();
+      });
+    });
+
 
   });
 
