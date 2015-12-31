@@ -307,7 +307,7 @@ describe('Test RBAC', function () {
       });
     });
 
-    it('should check if at least one valid role', function () {
+    it('should check if at least one valid permission', function () {
       const rbac = new RBAC();
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
@@ -322,6 +322,20 @@ describe('Test RBAC', function () {
         return rbac.check(testUser, 'idle, missing').then(function (priority) {
           priority.should.equal(2);
         });
+      });
+    });
+
+    it('should check if all are valid permissions', function () {
+      const rbac = new RBAC();
+      const testUser = 'tester';
+      const provider = new MockProvider(testUser);
+
+      provider.getAttributes = function () {};  // ignore attributes
+
+      rbac.addProvider(provider);
+
+      return rbac.check(testUser, 'test && idle').then(function (priority) {
+        priority.should.equal(1);
       });
     });
 
@@ -476,7 +490,7 @@ describe('Test RBAC', function () {
         -1, 0, 1, NaN, Infinity,
         {}, function () {}, /./, new Date()
       ];
-      
+
       rbac.addProvider(provider);
 
       // simple permission
