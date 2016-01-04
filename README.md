@@ -5,7 +5,8 @@
 
 [![NPM](https://nodei.co/npm/rbac-a.png?compact=true)](https://nodei.co/npm/rbac-a/)
 
-Role Based Access Control with Attributes and dynamic plugin roles implementation
+Role Based Access Control with Attributes and dynamic plugin roles implementation. This module follows the [NIST RBAC model](http://en.wikipedia.org/wiki/NIST_RBAC_model) and offer a flexible solution to allow or restrict user operations.
+
 
 ## Install
 
@@ -14,14 +15,23 @@ npm i rbac-a --save
 ```
 
 
+## Introduction
+
+In an RBAC system, permissions are assigned to roles, not users. Therefore, roles act as a ternary relation between permissions and users. Permissions are static, defined in the applications. Roles, on the other hand, are dynamic and can be defined from an application interface (API), or user interface (UI), and saved in a datastore.
+
+This module is not dependent on an authentication, a user session, or a datastore system. The relation between the user and it's roles are specified by a `Provider`. It is the application's responsibility to implement such provider. See [providers](#providers) for more information.
+
+Rules are applied in consideration with the roles hierarchy. Top level roles always have priority over inherited roles. When validating users against given permissions, the best role priority matching the permissions is returned. Therefore, "allowed" users will always resolve with a positive integer, and "restricted" users will always resolve with a non-numeric value (i.e. `NaN`). See [usage](#usage) for more information, or [how to restrict users](#applications) with this module.
+
+
 ## Usage
 
 ```javascript
 const RBAC = require('rbac-a');
+const CustomProvider = createProvider(); // extends Provider
 
-var rbac = new RBAC();
+var rbac = new RBAC(new CustomProvider());
 
-// ... add providers and setup AttributeManager if necessary
 
 rbac.on('error', function (err) {
   console.error('Error while checking $s/%s', err.role, err.user);
