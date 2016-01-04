@@ -1,7 +1,7 @@
 {
   "name": "rbac-a",
   "description": "RBAC-A dynamic plugin roles implementation",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "Yanick Rochon <yanick.rochon@gmail.com>",
   "keywords": [
     "rbac",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "error-factory": "^0.1.6",
-    "promise-events": "0.1.1"
+    "promise-events": "0.1.2"
   },
   "devDependencies": {
     "istanbul": "^0.4.1",
