@@ -228,7 +228,7 @@ A default provider is implemented, using JSON as data source.
 
 ```javascript
 const RBAC = require('rbac-a');
-const JsonProvider = require('rbac-a/lib/providers/json');
+const JsonProvider = RBAC.providers.JsonProvider;
 
 var rbac = new RBAC();
 
