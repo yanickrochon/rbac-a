@@ -30,7 +30,9 @@ Rules are applied in consideration with the roles hierarchy. Top level roles alw
 const RBAC = require('rbac-a');
 const CustomProvider = createProvider(); // extends Provider
 
-var rbac = new RBAC(new CustomProvider());
+var rbac = new RBAC({
+  provider: new CustomProvider()
+});
 
 
 rbac.on('error', function (err) {
@@ -87,71 +89,31 @@ The above example would validate if the user has *any* (i.e. `OR`) of the specif
 ```javascript
 rbac.check(userId, 'list&&read&&review').then(...);
 
-// mix OR / AND
+// mix OR / AND (all the following are equivalent)
 rbac.check(userId, 'post && update, read && delete').then(...);
-// is the same as
 rbac.check(userId, ['post && update', 'read && delete']).then(...);
+rbac.check(userId, [['post', 'update'], ['read', 'delete']]).then(...);
 ```
 
-
-## Attributes
-
-Attributes determine if a role is active or not. If an attribute fails (returns or resolves with a falsy value, or if an error is thrown), then the role is considered inactive and treated as if not part of the user's membership. A role with no attributes is always active.
-
-When checking permissions, `rbac.check` only allows passing one set of persistent and shared parameters that will be sent to any and all specified roles' attributes. And since attributes are business-specific, it is entirely to the implementing project to manage and handle any such parameters.
-
-Attribute functions may return or resolve with a thruthy value if all conditions succeed, meaning that the role is active for the specified user, or a falsy value if the conditions are not met, meaning that the role is not active for the specified user. If an attribute throws an error, the condition will fail and the role will not be available.
-
-An inactive role discards all inheriting roles for the specified user.
-
-Any uncaught error thrown will emit an `error` event via the `RBAC` instance. The error will be extended with the specified `user`, current `role`, and `permissions`.
-
-
-## Applications
-
-The RBAC system is *not* about restricting users, but seeing if a user possess the required permissions or not. However, implementing an allow/deny system is quite trival. In fact, `rbac.check` resolves with a numeric value representing the depth or role inheritance that matched the desired permissions. Lower values have higher priority (i.e. weight). For example :
-
-```javascript
-function allowDeny(user, allowedPermissions, deniedPermissions, params) {
-  function check(permissions) {
-    // handle catch separately to prevent failing prematurely. The promise
-    // will always resolve with a numeric value
-    return permissions && rbac.check(user, permissions, params).then(function (allowed) {
-      return allowed || Infinity;
-    }, function () {
-      // Infinity is the highest possible value (or lowest possible priority)
-      return Infinity;
-    }) || Infinity;
-  }
-
-  return Promise.all([
-    check(allowedPermissions),
-    check(deniedPermissions)
-  ]).then(function (results) {
-    // Note: if both are equal, then the rule failed
-    if (results[0] < results[1]) {
-      return true;                    // resolve next
-    } else {
-      return false;
-    }
-  });
-}
-
-
-allowDeny(user, 'writer', 'auditor').then(function (allowed) {
-  if (allowed) {
-    console.log('User is a writer and NOT an auditor');
-  } else {
-    console.log('User is a writer but auditors are restricted');
-  }
-}, function (err) {
-  console.error(err.stack);
-})
-```
 
 ## Providers
 
-By default, all calls to the RBAC-A instance returns `NaN` (not allowed). To validate users against permissions, you must specify a provider extending the built-in class `Provider`. For example :
+Providers are the pluggable core of the RBAC-A system. To validate users against permissions, a provider extending the built-in class `Provider` must be specified. Unlike [attributes](#attributes), providers are mandatory. A provider may be specified from the constructor, or assigned directly to the prototype.
+
+```javascript
+const rbac1 = new RBAC({
+  provider: new CustomProvider()
+});
+
+// or
+RBAC.prototype.provider = new CustomProvider();
+
+const rbac2 = new RBAC();
+```
+
+**NOTE**: when specifying a provider to the prototype, all instances not specifying their own `Provider` will fall back to that one.
+
+The `CustomProvider` instance must extend `Provider`. For example :
 
 ```javascript
 'use strict';
@@ -222,7 +184,8 @@ class CustomProvider extends Provider {
 }
 ```
 
-### Built-in providers
+
+### Built-in providers : JSON (static, sync)
 
 A default provider is implemented, using JSON as data source. 
 
@@ -230,9 +193,106 @@ A default provider is implemented, using JSON as data source.
 const RBAC = require('rbac-a');
 const JsonProvider = RBAC.providers.JsonProvider;
 
-var rbac = new RBAC();
+var rbac = new RBAC({
+  provider: new JsonProvider('path/to/json')
+});
+```
 
-rbac.addProvider(new JsonProvider('path/to/json'));
+
+## Attributes
+
+Attributes determine if a role is active or not. If an attribute fails (returns or resolves with a falsy value, or if an error is thrown), then the role is considered inactive and treated as if not part of the user's membership. A role with no attributes is always active.
+
+When checking permissions, `rbac.check` only allows passing one set of persistent and shared parameters that will be sent to any and all specified roles' attributes. And since attributes are business-specific, it is entirely to the implementing project to manage and handle any such parameters.
+
+Attribute functions may return or resolve with a thruthy value if all conditions succeed, meaning that the role is active for the specified user, or a falsy value if the conditions are not met, meaning that the role is not active for the specified user. If an attribute throws an error, the condition will fail and the role will not be available.
+
+An inactive role discards all inheriting roles for the specified user.
+
+Any uncaught error thrown will emit an `error` event via the `RBAC` instance. The error will be extended with the specified `user`, and current `role`.
+
+An attributes manager may be specified from the constructor, or assigned directly to the prototype.
+
+```javascript
+const rbac1 = new RBAC({
+  attributes: new RBAC.AttributesManager()
+});
+
+// or
+RBAC.prototype.attributes = new RBAC.AttributesManager();
+
+const rbac2 = new RBAC();
+```
+
+**NOTE**: when specifying an attributes manager to the prototype, all instances not specifying their own `AttributesManager` will fall back to that one.
+
+**NOTE**: if not specified, or not set on the prototype, a new instance of `AttributesManager` will be created.
+
+
+### Adding attributes
+
+To add attributes to the attributes manager, simply call the `set` method, passing a named function. The function name is the attribute name.
+
+```javascript
+function businessHours(user, role, params) {
+  return /* ... */;
+}
+
+rbac.attributes.set(businessHours);
+```
+
+Attributes may return a `Promise` if they require asynchronous validation.
+
+### Removing attributes
+
+Attributes may be removed by value or by name :
+
+```javascript
+rbac.attributes.remove('businessHours');
+rbac.attributes.remove(businessHours);
+```
+
+
+## Applications
+
+The RBAC system is *not* about restricting users, but seeing if a user possess the required permissions or not. However, implementing an allow/deny system is quite trival. In fact, `rbac.check` resolves with a numeric value representing the depth or role inheritance that matched the desired permissions. Lower values have higher priority (i.e. weight). For example :
+
+```javascript
+function allowDeny(user, allowedPermissions, deniedPermissions, params) {
+  function check(permissions) {
+    // handle catch separately to prevent failing prematurely. The promise
+    // will always resolve with a numeric value
+    return permissions && rbac.check(user, permissions, params).then(function (allowed) {
+      return allowed || Infinity;
+    }, function () {
+      // Infinity is the highest possible value (or lowest possible priority)
+      return Infinity;
+    }) || Infinity;
+  }
+
+  return Promise.all([
+    check(allowedPermissions),
+    check(deniedPermissions)
+  ]).then(function (results) {
+    // Note: if both are equal, then the rule failed
+    if (results[0] < results[1]) {
+      return true;                    // resolve next
+    } else {
+      return false;
+    }
+  });
+}
+
+
+allowDeny(user, 'writer', 'auditor').then(function (allowed) {
+  if (allowed) {
+    console.log('User is a writer and not an auditor');
+  } else {
+    console.log('User is a not a writer, or is an auditor');
+  }
+}, function (err) {
+  console.error(err.stack);
+})
 ```
 
 

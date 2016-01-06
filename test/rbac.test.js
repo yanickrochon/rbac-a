@@ -14,7 +14,7 @@ describe('Test RBAC', function () {
     let rbac;
 
     beforeEach(function () {
-      rbac = new RBAC(new Provider());
+      rbac = new RBAC({ provider: new Provider() });
     });
 
     afterEach(function () {
@@ -35,14 +35,20 @@ describe('Test RBAC', function () {
 
   describe('Testing constructor', function () {
 
-    it('should fail with invalid Provider', function () {
+    it('should fail with missing Provider', function () {
+      (RBAC.prototype.provider === null).should.be.true();
+
+      (function () { new RBAC(); }).should.throw('Invalid or missing provider');
+    });
+
+    it('should fail with invalid or missing Provider', function () {
       [
         undefined, null, false, true,
         NaN, Infinity, -1, 0, 1,
         '', 'Foo',
         function () {}, {}, [], /./, new Date(), Promise.resolve()
       ].forEach(function (provider) {
-        (function () { new RBAC(provider); }).should.throw('Invalid or missing provider');
+        (function () { new RBAC({ provider: provider }); }).should.throw('Invalid or missing provider');
       });
     });
 
@@ -53,7 +59,7 @@ describe('Test RBAC', function () {
         '', 'Foo',
         function () {}, {}, [], /./, new Date(), Promise.resolve()
       ].forEach(function (attrManager) {
-        (function () { new RBAC(new Provider(), attrManager); }).should.throw('Invalid attributes manager');
+        (function () { new RBAC({ provider: new Provider(), attributes: attrManager }); }).should.throw('Invalid attributes manager');
       });
     });
 
@@ -89,7 +95,7 @@ describe('Test RBAC', function () {
   describe('Testing attributes', function () {
 
     it('should create default attribute manager', function () {
-      let rbac = new RBAC(new Provider());
+      let rbac = new RBAC({ provider: new Provider() });
 
       rbac.attributes.should.be.instanceOf(AttributesManager);
     });
@@ -97,8 +103,8 @@ describe('Test RBAC', function () {
     it('should allow setting custom attributes manager', function () {
       let attributes = new AttributesManager();
 
-      let rbac1 = new RBAC(new Provider());
-      let rbac2 = new RBAC(new Provider(), attributes);
+      let rbac1 = new RBAC({ provider: new Provider() });
+      let rbac2 = new RBAC({ provider: new Provider(), attributes: attributes });
 
       rbac1.attributes.should.not.equal(rbac2.attributes);
       rbac2.attributes.should.equal(attributes);
@@ -110,8 +116,8 @@ describe('Test RBAC', function () {
 
       RBAC.prototype.attributes = attributes;
 
-      let rbac1 = new RBAC(new Provider());
-      let rbac2 = new RBAC(new Provider());
+      let rbac1 = new RBAC({ provider: new Provider() });
+      let rbac2 = new RBAC({ provider: new Provider() });
 
       rbac1.attributes.should.equal(attributes);
       rbac1.attributes.should.equal(rbac2.attributes);
@@ -154,26 +160,11 @@ describe('Test RBAC', function () {
       }
     }
 
-    /*
-    it('should fail if no provider', function () {
-      const rbac = new RBAC(new Provider());
-      const testUser = 'tester';
-
-      return rbac.check(testUser, 'test').then(function (priority) {
-        priority.should.be.NaN();
-      }).then(function () {
-        return rbac.check(testUser, 'idle').then(function (priority) {
-          priority.should.be.NaN();
-        });
-      });
-    });
-    */
-
 
     it('should check basic permission', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
 
       provider.getAttributes = function () {};  // ignore attributes
 
@@ -189,7 +180,7 @@ describe('Test RBAC', function () {
     it('should check basic permission (no attributes manager)', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
 
       provider.getAttributes = function () {};  // ignore attributes
 
@@ -205,7 +196,7 @@ describe('Test RBAC', function () {
     it('should fail if attribute unavailable', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
 
       rbac.attributes.set(function testAttribute(user, role, params) {
         user.should.equal('tester');
@@ -226,7 +217,7 @@ describe('Test RBAC', function () {
     it('should check if attribute is available', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
       const testParams = { foo: 'bar', buz: true };
       let testAttrCalled = false;
       let dummyAttrCalled = false;
@@ -280,7 +271,7 @@ describe('Test RBAC', function () {
     it('should check if at least one valid permission', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
 
       provider.getAttributes = function () {};  // ignore attributes
 
@@ -296,7 +287,7 @@ describe('Test RBAC', function () {
     it('should check if all are valid permissions', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
 
       provider.getAttributes = function () {};  // ignore attributes
 
@@ -308,7 +299,7 @@ describe('Test RBAC', function () {
     it('should fail if missing role', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
 
       provider.getRoles = function () {
         return {
@@ -328,7 +319,7 @@ describe('Test RBAC', function () {
     it('should fail if missing permission', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
 
       provider.getAttributes = function () {};  // ignore attributes
 
@@ -340,7 +331,7 @@ describe('Test RBAC', function () {
 
     it('should emit error when checking roles', function () {
       const provider = new MockProvider();
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
       let errorThrown = false;
 
       provider.getRoles = function (user) {
@@ -368,7 +359,7 @@ describe('Test RBAC', function () {
 
     it('should emit error when checking attributes', function () {
       const provider = new MockProvider();
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
       let errorThrown = false;
 
       provider.getRoles = function (user) {
@@ -405,7 +396,7 @@ describe('Test RBAC', function () {
     it('should emit error when checking permissions', function () {
       const testUser = 'tester';
       const provider = new MockProvider(testUser);
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
       let errorThrown = false;
 
       provider.getPermissions = function (role) {
@@ -438,7 +429,7 @@ describe('Test RBAC', function () {
 
     it('should fail if invalid permission', function () {
       const provider = new MockProvider();
-      const rbac = new RBAC(provider);
+      const rbac = new RBAC({ provider: provider });
       const invalid = [
         // invalid types
         undefined, null, false, true,
