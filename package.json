@@ -29,6 +29,7 @@
     "url": "https://github.com/yanickrochon/rbac-a/issues"
   },
   "dependencies": {
+    "co": "^4.6.0",
     "error-factory": "^0.1.6",
     "promise-events": "0.1.2"
   },

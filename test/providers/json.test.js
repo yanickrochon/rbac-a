@@ -47,7 +47,6 @@ describe('Test JSON provider', function () {
     provider.should.be.instanceOf(Provider);
   });
 
-
   describe('Testing getRoles', function () {
 
     it('should return simple role', function () {
@@ -62,7 +61,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getRoles('joe').should.deepEqual(expected);
+      provider.getRoles('joe').should.eventually.deepEqual(expected);
     });
 
     it('should ignore missing user', function () {
@@ -70,7 +69,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getRoles('missing').should.deepEqual(expected);
+      provider.getRoles('missing').should.eventually.deepEqual(expected);
     });
 
     it('should ignore missing roles', function () {
@@ -78,7 +77,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getRoles('jim').should.deepEqual(expected);
+      provider.getRoles('jim').should.eventually.deepEqual(expected);
     });
 
     it('should skip if no rule', function () {
@@ -87,7 +86,7 @@ describe('Test JSON provider', function () {
       let provider = new JsonProvider();
       provider._rules = null;
 
-      provider.getRoles('joe').should.deepEqual(expected);
+      provider.getRoles('joe').should.eventually.deepEqual(expected);
     });
 
   });

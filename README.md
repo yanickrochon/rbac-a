@@ -136,11 +136,11 @@ class CustomProvider extends Provider {
         "secondary": ...,
         ...
       }
-  
+
   The method mey return a promise resolving with the
   expected return value.
 
-  @param use {mixed}
+  @param user {mixed}
   @return {Object<string,number>}
   */
   getRoles(user) {

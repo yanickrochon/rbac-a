@@ -7,3 +7,8 @@ module.exports.AttributesManager = require('./lib/attributes-manager');
 module.exports.providers = {
   JsonProvider: require('./lib/providers/json')
 };
+
+// utilities
+module.exports.util = {
+  collect: require('./lib/util/collect')
+};
