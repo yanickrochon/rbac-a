@@ -76,8 +76,7 @@ When invoking `rbac.check`, the argument `user` is an arbitrary value that is on
 
 ## Grouped permissions
 
-To specify more than one permission for a given rule, it is possible to pass an
-array, or a comma-separated string of permissions. For example :
+To specify more than one permission for a given rule, it is possible to pass an array, or a comma-separated string of permissions. For example :
 
 ```javascript
 rbac.check(userId, 'list, read').then(...);
@@ -136,7 +135,7 @@ class CustomProvider extends Provider {
         "secondary": ...,
         ...
       }
-  
+
   The method mey return a promise resolving with the
   expected return value.
 
@@ -184,10 +183,44 @@ class CustomProvider extends Provider {
 }
 ```
 
+When hybrid systems require more complex providers, a composed one may be implemented. For example :
 
-### Built-in providers : JSON (static, sync)
+```javascript
+class CompositeProvider extends Provider {
 
-A default provider is implemented, using JSON as data source. 
+  constructor(options) {
+    this.json = new JsonProvider(options.path);
+    this.custom = new CustomProvider(options);
+  }
+
+  getRoles(user) {
+    // NOTE : ignore JSON provider, here
+    return this.custom.getRoles(user);
+  }
+
+  getPermissions(role) {
+    return Promise.all([
+      this.json.getPermissions(role),
+      this.custom.getPermissions(role)
+    ]).then(function (permissionLists) {
+      var jsonPermissions = permissionLists[0] || [];
+      var customPermissions = permissionLists[1] || [];
+      return jsonPermissions.push.apply(jsonPermissions, customPermissions);
+    });
+  }
+
+  getAttributes(role) {
+    // NOTE : ignore custom provider, here
+    return this.json.getAttributes(role);
+  }
+}
+```
+
+### Built-in providers
+
+#### JSON (static, sync)
+
+A default provider is implemented, using JSON as data source.
 
 ```javascript
 const RBAC = require('rbac-a');
@@ -198,6 +231,42 @@ var rbac = new RBAC({
 });
 ```
 
+The JSON should have the following format, for example :
+
+```json
+{
+  "roles": {
+    "guest": {
+    },
+    "reader": {
+      "permissions": ["read"],
+      "inherited": ["guest"]
+    },
+    "writer": {
+      "permissions": ["create"],
+      "inherited": ["reader"]
+    },
+    "editor": {
+      "permissions": ["update"],
+      "inherited": ["reader"],
+      "attributes": ["dailySchedule"]
+    },
+    "director": {
+      "permissions": ["delete"],
+      "inherited": ["reader", "editor"],
+    },
+    "admin": {
+      "permissions": ["manage"],
+      "inherited": ["director"],
+      "attributes": ["hasSuperPrivilege"]
+    }
+  },
+  "users": {
+    "john.smith": ["writer"],
+    "root": ["admin"]
+  }
+}
+```
 
 ## Attributes
 
@@ -255,7 +324,7 @@ rbac.attributes.remove(businessHours);
 
 ## Applications
 
-The RBAC system is *not* about restricting users, but seeing if a user possess the required permissions or not. However, implementing an allow/deny system is quite trival. In fact, `rbac.check` resolves with a numeric value representing the depth or role inheritance that matched the desired permissions. Lower values have higher priority (i.e. weight). For example :
+The RBAC system is *not* about restricting users, but seeing if a user possess the required permissions or not. However, implementing an allow/deny system is quite trival. In fact, since `rbac.check` resolves with a numeric value representing the depth or best rule that matched the desired permissions, and lower values have higher priority (i.e. weight), implementing such system means only comparing two results. For example :
 
 ```javascript
 function allowDeny(user, allowedPermissions, deniedPermissions, params) {

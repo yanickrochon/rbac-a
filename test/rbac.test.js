@@ -8,7 +8,6 @@ describe('Test RBAC', function () {
 
 
   describe('RBAC as EventEmitter', function () {
-    const PromiseEventEmitter = require('promise-events');
     const EventEmitter = require('events');
 
     let rbac;
@@ -19,11 +18,6 @@ describe('Test RBAC', function () {
 
     afterEach(function () {
       rbac = undefined;
-    });
-
-
-    it('should extend promise-events', function () {
-      rbac.should.be.instanceOf(PromiseEventEmitter);
     });
 
     it('should extend standard EventEmitter', function () {
