@@ -189,7 +189,7 @@ When hybrid systems require more complex providers, a composed one may be implem
 class CompositeProvider extends Provider {
 
   constructor(options) {
-    this.json = new JsonProvider(options.path);
+    this.json = new JsonProvider(options.rulesObject);
     this.custom = new CustomProvider(options);
   }
 
@@ -220,14 +220,14 @@ class CompositeProvider extends Provider {
 
 #### JSON (static, sync)
 
-A default provider is implemented, using JSON as data source.
+A default provider is implemented, using a JSON Object as data source.
 
 ```javascript
 const RBAC = require('rbac-a');
 const JsonProvider = RBAC.providers.JsonProvider;
 
 var rbac = new RBAC({
-  provider: new JsonProvider('path/to/json')
+  provider: new JsonProvider(rulesObject)
 });
 ```
 
