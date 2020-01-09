@@ -32,7 +32,7 @@ describe('Test JSON provider', function () {
       }
     },
     users: {
-      //'root': ['admin'],
+      'root': ['admin'],
       //'bob': ['director'],
       'joe': ['director', 'reader'],
       'jim': ['missingRole']
@@ -44,7 +44,7 @@ describe('Test JSON provider', function () {
   it('should be an instance of Provider', function () {
     const provider = new JsonProvider();
 
-    provider.should.be.instanceOf(Provider);
+    expect( provider ).toBeInstanceOf(Provider);
   });
 
 
@@ -62,7 +62,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getRoles('joe').should.deepEqual(expected);
+      expect( provider.getRoles('joe') ).toEqual(expected);
     });
 
     it('should ignore missing user', function () {
@@ -70,7 +70,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getRoles('missing').should.deepEqual(expected);
+      expect( provider.getRoles('missing') ).toEqual(expected);
     });
 
     it('should ignore missing roles', function () {
@@ -78,7 +78,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getRoles('jim').should.deepEqual(expected);
+      expect( provider.getRoles('jim') ).toEqual(expected);
     });
 
     it('should skip if no rule', function () {
@@ -87,7 +87,7 @@ describe('Test JSON provider', function () {
       let provider = new JsonProvider();
       provider._rules = null;
 
-      provider.getRoles('joe').should.deepEqual(expected);
+      expect( provider.getRoles('joe') ).toEqual(expected);
     });
 
   });
@@ -100,7 +100,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getPermissions('writer').should.deepEqual(expected);
+      expect( provider.getPermissions('writer') ).toEqual(expected);
     });
 
     it('should ignore missing role', function () {
@@ -108,7 +108,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getPermissions('missingRole').should.deepEqual(expected);
+      expect( provider.getPermissions('missingRole') ).toEqual(expected);
     });
 
   });
@@ -121,7 +121,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getAttributes('director').should.deepEqual(expected);
+      expect( provider.getAttributes('director') ).toEqual(expected);
     });
 
     it('should ignore missing attribute', function () {
@@ -129,7 +129,7 @@ describe('Test JSON provider', function () {
 
       let provider = new JsonProvider(RULES);
 
-      provider.getAttributes('missingAttribute').should.deepEqual(expected);
+      expect( provider.getAttributes('missingAttribute') ).toEqual(expected);
     });
 
   });

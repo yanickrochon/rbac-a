@@ -7,9 +7,9 @@ describe('Test Provider', function () {
   it('should throw "Not implemented"', function () {
     var provider = new Provider();
 
-    (function () { provider.getRoles(); }).should.throw('Not implemented');
-    (function () { provider.getPermissions(); }).should.throw('Not implemented');
-    (function () { provider.getAttributes(); }).should.throw('Not implemented');
+    expect(function () { provider.getRoles(); }).toThrow('Not implemented');
+    expect(function () { provider.getPermissions(); }).toThrow('Not implemented');
+    expect(function () { provider.getAttributes(); }).toThrow('Not implemented');
   });
 
 

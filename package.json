@@ -16,9 +16,8 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "mocha",
-    "test-cov": "istanbul cover _mocha",
-    "test-travis": "istanbul cover _mocha --report lcovonly"
+    "test": "jest",
+    "test-cov": "jest --coverage"
   },
   "homepage": "https://github.com/yanickrochon/rbac-a#readme",
   "repository": {
@@ -29,9 +28,7 @@
     "url": "https://github.com/yanickrochon/rbac-a/issues"
   },
   "devDependencies": {
-    "istanbul": "^0.4.3",
-    "mocha": "^2.5.3",
-    "should": "^9.0.0"
+    "jest": "^24.9.0"
   },
   "license": "MIT"
 }

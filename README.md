@@ -8,13 +8,6 @@
 Role Based Access Control with Attributes and dynamic plugin roles implementation. This module follows the [NIST RBAC model](http://en.wikipedia.org/wiki/NIST_RBAC_model) and offer a flexible solution to allow or restrict user operations.
 
 
-## Install
-
-```
-npm i rbac-a --save
-```
-
-
 ## Introduction
 
 In an RBAC system, permissions are assigned to roles, not users. Therefore, roles act as a ternary relation between permissions and users. Permissions are static, defined in the applications. Roles, on the other hand, are dynamic and can be defined from an application interface (API), or user interface (UI), and saved in a datastore.
@@ -28,12 +21,17 @@ Rules are applied in consideration with the roles hierarchy. Top level roles alw
 
 ```javascript
 const RBAC = require('rbac-a');
-const CustomProvider = createProvider(); // extends Provider
 
-var rbac = new RBAC({
+
+class CustomProvider extends RBAC.Provider {
+  getRoles(user) { return {/*...object...*/}; }
+  getPermissions(role) { return [/*...array...*/]; }
+  getAttributes(role) { return [/*..array...*/]; }
+}
+
+const rbac = new RBAC({
   provider: new CustomProvider()
 });
-
 
 rbac.on('error', function (err) {
   console.error('Error while checking $s/%s', err.role, err.user);
@@ -48,7 +46,7 @@ rbac.check(user, 'create').then(function (allowed) {
     console.info('Please contact your system admin for more information');
   }
 }).catch(function (err) {
-  console.error(err && err.stack || err || 'ERROR');
+  console.error(err && err.stack ? err : 'ERROR');
 });
 
 // specify attributes arguments
@@ -60,18 +58,45 @@ rbac.check(user, 'edit', { time: Date.now() }).then(function (allowed) {
     console.info('Please contact your system admin for more information');
   }
 }).catch(function (err) {
-  console.error(err && err.stack || err || 'ERROR');
+  console.error(err && err.stack ? err : 'ERROR');
 });
 ```
 
-The method `rbac.check` will resolve with a numeric, non-zero, positive, integer value if the specified user is granted the specified permissions, or `NaN` otherwise.
+The method `rbac.check` will resolve with a numeric (non-zero positive integer) value if the specified user is granted the specified permissions, or `NaN` otherwise.
 
-If, for ever reason, the method should fail (i.e. the promise is rejected), then it should be considered equal as if it was resolved with `NaN`.
+If, for ever reason, the method should fail, or if the promise is rejected, then it should be considered equal as if it was resolved with `NaN`.
 
 
 ## Users
 
-When invoking `rbac.check`, the argument `user` is an arbitrary value that is only checked within the specified providers. For this reason, this value should normally be numeric or string. However, when implementing custom providers, other data types and values may be passed to the function.
+When invoking `rbac.check`, the argument `user` is an arbitrary value that is only checked within the specified providers. For this reason, this value should normally be numeric or string. However, when implementing custom providers, other data types and values may be passed to the function, such as a user object.
+
+
+## Roles
+
+A role is an organization unit defining a category of permissions and attributes. 
+
+## Attributes
+
+An attribute defines a condition to a role, and because the same attributes can be set to different roles, they serve to specify common permissions or restrictions across many roles. For example, given the following definition :
+
+```json
+{
+  "worker": {
+    "permissions": ["read"],
+    "attributes": ["restricted"],
+  },
+  "supervisor": {
+    "permissions": ["read", "write"],
+    "attributes": ["restricted"],
+  },
+  "director": {
+    "inherit": ["supervisor"]
+  }
+}
+```
+
+In turn, the `AttributeManager`'s purpose is to validate 
 
 
 ## Grouped permissions
@@ -97,9 +122,41 @@ rbac.check(userId, [['post', 'update'], ['read', 'delete']]).then(...);
 
 ## Providers
 
-Providers are the pluggable core of the RBAC-A system. To validate users against permissions, a provider extending the built-in class `Provider` must be specified. Unlike [attributes](#attributes), providers are mandatory. A provider may be specified from the constructor, or assigned directly to the prototype.
+Providers are the pluggable core of the RBAC-A system. To validate users against permissions, a provider extending the built-in class `Provider` must be specified. Unlike [attributes](#attributes), providers are mandatory. A provider may be specified from the constructor, or assigned directly to the prototype as default value for all `RBAC` instances.
+
+The role of a `Provider` is to :
+
+1. return a hiarerchichal structure specifying roles for the given user
+2. return an array of allowed permissions for *any* given role
+3. return an array of attributes for *any* given role
+
+
+The `CustomProvider` instance **must** extend `Provider`. For example :
 
 ```javascript
+const Provider = require('rbac-a').Provider;
+
+class CustomProvider extends Provider {
+  getRoles(user) {
+    return {
+      "root": {
+        "child": null,
+        "subChild": {
+          "base": null
+        }
+      }
+    };
+  }
+
+  getPermissions(role) {
+    return ['read', 'write'];
+  }
+
+  getAttributes(role) {
+    return ['workHours'];
+  }
+}
+
 const rbac1 = new RBAC({
   provider: new CustomProvider()
 });
@@ -111,77 +168,6 @@ const rbac2 = new RBAC();
 ```
 
 **NOTE**: when specifying a provider to the prototype, all instances not specifying their own `Provider` will fall back to that one.
-
-The `CustomProvider` instance must extend `Provider`. For example :
-
-```javascript
-'use strict';
-
-const Provider = require('rbac-a').Provider;
-
-class CustomProvider extends Provider {
-
-  /**
-  Return all the roles available for the given user. The return value
-  must be an object, recursively defining the associated roles for the
-  specified user. Return an empty object if user has no roles.
-
-  Ex: {
-        "role1": {
-          "role1.1": null,
-          "role1.2": { ... },
-          ...
-        },
-        "secondary": ...,
-        ...
-      }
-
-  The method mey return a promise resolving with the
-  expected return value.
-
-  @param use {mixed}
-  @return {Object<string,number>}
-  */
-  getRoles(user) {
-    return {};   // TODO : implement stub
-  }
-
-  /**
-  Return all permissions for the specified role. The return value
-  must be an array. Return an empty array if role is missing or
-  no permission for the specified role.
-
-  Ex: ['permission1', 'permission2', ... ]
-
-  The method mey return a promise resolving with the
-  expected return value.
-
-  @param role {mixed}
-  @return {Array<string>}
-  */
-  getPermissions(role) {
-    return [];   // TODO : implement stub
-  }
-
-  /**
-  Return all attributes for the specified role. The return value must
-  be an array. Return an empty array if role is missing or if no
-  attributes for the specified role.
-
-  Ex: ['attribute1', 'attribute2', ... ]
-
-  The method mey return a promise resolving with the
-  expected return value.
-
-  @param role {mixed}
-  @return {Array<string>}
-  */
-  getAttributes(role) {
-    return [];   // TODO : implement stub
-  }
-
-}
-```
 
 When hybrid systems require more complex providers, a composed one may be implemented. For example :
 
