@@ -8,6 +8,23 @@
 Role Based Access Control with Attributes and dynamic plugin roles implementation. This module follows the [NIST RBAC model](http://en.wikipedia.org/wiki/NIST_RBAC_model) and offer a flexible solution to allow or restrict user operations.
 
 
+## Breaking change between 0.x and 0.x
+
+Attribute validation now receive a single argument. Instead of :
+
+```js
+// 0.x
+attributeManager.set('myAttribute', function (user, role, params) { ... });
+```
+
+the function signature should be :
+
+```js
+// 1.x
+attributeManager.set('myAttribute', function ({ user, role, params, activeAttributes }) { ... });
+```
+
+
 ## Introduction
 
 In an RBAC system, permissions are assigned to roles, not users. Therefore, roles act as a ternary relation between permissions and users. Permissions are static, defined in the applications. Roles, on the other hand, are dynamic and can be defined from an application interface (API), or user interface (UI), and saved in a datastore.

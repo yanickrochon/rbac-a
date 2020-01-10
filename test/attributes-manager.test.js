@@ -119,19 +119,26 @@ describe('Test Attributes Manager', function () {
       const user = 123;
       const role = 'test';
       const params = { foo: 'bar' };
+
+      const context = {
+        user: user,
+        role: role,
+        params: params
+      };
+
       const validated = 'validated';
 
-      function attributeValidator(u, r, p) {
-        expect( user ).toEqual(u);
-        expect( role ).toEqual(r);
-        expect( params ).toEqual(p);
+      function attributeValidator(context) {
+        expect( user ).toEqual(context.user);
+        expect( role ).toEqual(context.role);
+        expect( params ).toEqual(context.params);
 
         return validated;
       }
 
       attributes.set(attributeValidator);
 
-      expect( attributes.validate('attributeValidator', user, role, params) ).toEqual(validated);
+      expect( attributes.validate('attributeValidator', context) ).toEqual(validated);
     });
 
     it('should fail with invalid type', function () {

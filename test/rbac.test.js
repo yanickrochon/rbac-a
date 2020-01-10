@@ -193,10 +193,10 @@ describe('Test RBAC', function () {
       const provider = new MockProvider(testUser);
       const rbac = new RBAC({ provider: provider });
 
-      rbac.attributes.set(function testAttribute(user, role, params) {
-        expect( user ).toEqual('tester');
-        expect( role ).toEqual('tester');
-        expect( (typeof params) ).toEqual('undefined');
+      rbac.attributes.set(function testAttribute(context) {
+        expect( context.user ).toEqual('tester');
+        expect( context.role ).toEqual('tester');
+        expect( context.params ).toEqual( {} );
         return false;
       });
 
@@ -217,18 +217,18 @@ describe('Test RBAC', function () {
       let testAttrCalled = false;
       let dummyAttrCalled = false;
 
-      rbac.attributes.set(function testAttribute(user, role, params) {
-        expect( user ).toEqual('tester');
-        expect( role ).toEqual('tester');
-        expect( params ).toEqual(testParams);
+      rbac.attributes.set(function testAttribute(context) {
+        expect( context.user ).toEqual('tester');
+        expect( context.role ).toEqual('tester');
+        expect( context.params ).toEqual(testParams);
         testAttrCalled = true;
         return true;
       });
 
-      rbac.attributes.set(function dummyAttribute(user, role, params) {
-        expect( user ).toEqual('tester');
-        expect( role ).toEqual('dummy');
-        expect( params ).toEqual(testParams);
+      rbac.attributes.set(function dummyAttribute(context) {
+        expect( context.user ).toEqual('tester');
+        expect( context.role ).toEqual('dummy');
+        expect( context.params ).toEqual(testParams);
         dummyAttrCalled = true;
         return true;
       });
