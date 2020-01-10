@@ -194,7 +194,7 @@ Any uncaught error thrown will emit an `error` event via the `RBAC` instance. Th
 
 An attributes manager may be specified from the constructor, or assigned directly to the prototype.
 
-```javascript
+```js
 const rbac1 = new RBAC({
   attributes: new RBAC.AttributesManager()
 });
@@ -208,6 +208,14 @@ const rbac2 = new RBAC();
 **NOTE**: when specifying an attributes manager to the prototype, all instances not specifying their own `AttributesManager` will fall back to that one.
 
 **NOTE**: if not specified, or not set on the prototype, a new instance of `AttributesManager` will be created.
+
+**NOTE**: if the provider returns attributes that are not defined in the `AttributesManager`, the behavior is to consider them as returning `false`. However, passing `ignoreMissingAttributes: false` in option will make the instance throw instead.
+
+```js
+const rbac = new RBAC({
+  attributes: new RBAC.AttributesManager({ ignoreMissingAttributes: false })
+});
+```
 
 
 ### Adding attributes
