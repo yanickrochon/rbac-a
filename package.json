@@ -14,10 +14,21 @@
     "dynamic",
     "security"
   ],
-  "main": "index.js",
+  "main": "./index.js",
+  "browser": "./umd/rbac-a.min.js",
+  "module": "./esm/index.js",
   "scripts": {
+    "build": "npm run build:cjs && npm run build:esm && npm run build:es && npm run build:umd && npm run build:copy-files",
+    "build:cjs": "npx cross-env NODE_ENV=production BABEL_ENV=cjs babel ./src --out-dir ./build --ignore ./test",
+    "build:esm": "npx cross-env NODE_ENV=production BABEL_ENV=esm babel ./src --out-dir ./build/esm --ignore ./test",
+    "build:es": "npx cross-env NODE_ENV=production BABEL_ENV=es babel ./src --out-dir ./build/es --ignore ./test",
+    "build:umd": "npx cross-env BABEL_ENV=production-umd npx rollup -c scripts/rollup.config.js",
+    "build:copy-files": "node scripts/copy-files.js",
+    "prebuild": "npx rimraf build",
+    "release": "npm run build && npm publish build --tag latest",
     "test": "jest",
-    "test-cov": "jest --coverage"
+    "test-cov": "jest --coverage",
+    "lint": "eslint benchmarks src --fix"
   },
   "homepage": "https://github.com/yanickrochon/rbac-a#readme",
   "repository": {
@@ -28,7 +39,24 @@
     "url": "https://github.com/yanickrochon/rbac-a/issues"
   },
   "devDependencies": {
-    "jest": "^24.9.0"
+    "@babel/cli": "^7.7.7",
+    "@babel/core": "^7.7.7",
+    "@babel/plugin-proposal-class-properties": "^7.7.4",
+    "@babel/plugin-transform-modules-commonjs": "^7.7.5",
+    "@babel/preset-env": "^7.7.7",
+    "@babel/runtime": "^7.7.7",
+    "babel-jest": "^24.9.0",
+    "eslint": "^6.8.0",
+    "fs-extra": "^8.1.0",
+    "glob": "^7.1.6",
+    "jest": "^24.9.0",
+    "rimraf": "^3.0.0",
+    "rollup": "^1.29.0",
+    "rollup-plugin-babel": "^4.3.3",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-globals": "^1.4.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-size-snapshot": "^0.10.0"
   },
   "license": "MIT"
 }

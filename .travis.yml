@@ -1,9 +1,8 @@
 language: node_js
 node_js:
-  - "8"
   - "10"
   - "12"
 matrix:
   fast_finish: true
-script: "npm run-script test"
+script: "npm run-script test-cov"
 after_script: "npm install coveralls && cat ./coverage/lcov.info | coveralls"
