@@ -5,6 +5,7 @@ const AttributesManager = require('../lib/attributes-manager');
 
 const provider = new JsonProvider({
    "roles": {
+
       "worker": {
          "permissions": ["read"],
          "attributes": ["restricted"]
@@ -16,13 +17,25 @@ const provider = new JsonProvider({
       "director": {
          "inherited": ["supervisor"],
          "attributes": ["unrestricted"]
+      },
+
+
+      "root": {
+         "permissions": ["foo"],
+         "inherited": ["base"]
+      },
+      "base": {
+         "permissions": ['foo']
       }
+
    },
 
    "users": {
       "john": ["worker"],
       "bill": ["supervisor"],
-      "jane": ["director"]
+      "jane": ["director"],
+
+      "admin": ["root"]
    }
 });
 
@@ -62,10 +75,17 @@ const rbac = new RBAC({
       });
    });
 
-   it('should allow user john if param is passed', () => {
+   it('should allow user john if param is passed', function () {
       return rbac.check('john', 'read', { unrestricted: true }).then(function (access) {
          expect( isNaN(access) ).toBeFalsy();
       });
+   });
+
+   it('should return highest permission', function () {
+      return rbac.check('admin', 'foo', { unrestricted: true }).then(function (access) {
+         expect( access ).toBe(1);
+      });
+
    });
 
 });
