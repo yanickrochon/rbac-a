@@ -8,10 +8,20 @@
 Role Based Access Control with Attributes and dynamic plugin roles implementation. This module follows the [NIST RBAC model](http://en.wikipedia.org/wiki/NIST_RBAC_model) and offer a flexible solution to allow or restrict user operations.
 
 
-## Install
+## Breaking change between 0.x and 1.x
 
+Attribute validation now receive a single argument. Instead of :
+
+```js
+// 0.x
+attributesManager.set('myAttribute', function (user, role, params) { ... });
 ```
-npm i rbac-a --save
+
+the function signature should be :
+
+```js
+// 1.x
+attributesManager.set('myAttribute', function ({ user, role, params, activeAttributes }) { ... });
 ```
 
 
@@ -28,12 +38,11 @@ Rules are applied in consideration with the roles hierarchy. Top level roles alw
 
 ```javascript
 const RBAC = require('rbac-a');
-const CustomProvider = createProvider(); // extends Provider
 
-var rbac = new RBAC({
-  provider: new CustomProvider()
+const rbac = new RBAC({
+  provider: new RBAC.providers.JsonProvider()  // mandatory
+  //attributes: new RBAC.AttributesManager()   // optional
 });
-
 
 rbac.on('error', function (err) {
   console.error('Error while checking $s/%s', err.role, err.user);
@@ -48,7 +57,7 @@ rbac.check(user, 'create').then(function (allowed) {
     console.info('Please contact your system admin for more information');
   }
 }).catch(function (err) {
-  console.error(err && err.stack || err || 'ERROR');
+  console.error(err && err.stack ? err : 'ERROR');
 });
 
 // specify attributes arguments
@@ -60,32 +69,185 @@ rbac.check(user, 'edit', { time: Date.now() }).then(function (allowed) {
     console.info('Please contact your system admin for more information');
   }
 }).catch(function (err) {
-  console.error(err && err.stack || err || 'ERROR');
+  console.error(err && err.stack ? err : 'ERROR');
 });
 ```
 
-The method `rbac.check` will resolve with a numeric, non-zero, positive, integer value if the specified user is granted the specified permissions, or `NaN` otherwise.
+The method `rbac.check` will resolve with a numeric (non-zero positive integer) value if the specified user is granted the specified permissions, or `NaN` otherwise.
 
-If, for ever reason, the method should fail (i.e. the promise is rejected), then it should be considered equal as if it was resolved with `NaN`.
+If, for ever reason, the method should fail, or if the promise is rejected, then it should be considered equal as if it was resolved with `NaN`.
 
 
 ## Users
 
-When invoking `rbac.check`, the argument `user` is an arbitrary value that is only checked within the specified providers. For this reason, this value should normally be numeric or string. However, when implementing custom providers, other data types and values may be passed to the function.
+When invoking `rbac.check`, the argument `user` is an arbitrary value that is only checked within the specified providers. For this reason, this value should normally be numeric or string. However, when implementing custom providers, other data types and values may be passed to the function, such as a user object.
+
+
+## Roles
+
+A role is an organizational unit defining a category of permissions and attributes assigned to users. Roles consitute de bridge between actual permissions and users.
+
+Roles are hierarchichal, meaning that they may have a child to parent relationship. Providers returning user roles should provider the following structure to the RBAC instance:
+
+```js
+{
+  "root": {
+    "child": null,
+    "subChild": {
+      "base": null
+    }
+  }
+}
+```
+
+Roles that do not have children should have a value of `null`, whereas children roles are specified within another object. When validating permissions, the returned numerical value correspond to the level of the role that matched the specified permission.
+
+For example :
+
+
+```js
+// if permission "foo" is set to the "root" role then
+rbac.check(user, 'foo').then(function (priority) {
+  console.log( priority );  // -> 1
+});
+
+// if permission "foo" is set to the "base" role then
+rbac.check(user, 'foo').then(function (priority) {
+  console.log( priority );  // -> 3
+});
+
+// if permission "foo" is set to both "child" and "base" roles then
+rbac.check(user, 'foo').then(function (priority) {
+  console.log( priority );  // -> 2   // highest match
+});
+```
+
+## Attributes
+
+Attributes determine if a role is active or not, they define conditions to a role, and because the same attributes can be set to different roles, they serve to specify common permissions or restrictions across many roles. If an attribute fails (returns or resolves with a falsy value, or if an error is thrown), then the role is considered inactive and treated as if not part of the user's membership. A role with no attributes is always active.
+
+When checking permissions, `rbac.check` only allows passing one set of persistent and shared parameters that will be sent to any and all specified roles' attributes. And since attributes are business-specific, it is entirely to the implementing project to manage and handle any such parameters.
+
+Attribute functions may return or resolve with a thruthy value if the condition succeeds, meaning that the role is active for the specified user, or a falsy value if the condition is not met, meaning that the role is not active for the specified user. If an attribute throws an error, the condition will fail and the role will not be available.
+
+An inactive role discards all inheriting roles for the specified user.
+
+Any uncaught error thrown will emit an `error` event via the `RBAC` instance. The error will be extended with the specified `user`, and current `role`.
+
+
+
+For example, given the following definition :
+
+```json
+{
+  "worker": {
+    "permissions": ["read"],
+    "attributes": ["restricted"],
+  },
+  "supervisor": {
+    "permissions": ["read", "write"],
+    "attributes": ["restricted"],
+  },
+  "director": {
+    "inherit": ["supervisor"],
+    "attributes": ["unrestricted"],
+  }
+}
+```
+
+The role `"director"` would not be restricted for read and write, unlike for the `"supervisor"`. In turn, the `AttributesManager`'s purpose is to validate these attributes. Attributes that are invalid are considered non-existent when determining user permissions. For the above exemple, the `AttributesManager` might be configured as such :
+
+```js
+attributes.set('restricted', function (context) {
+   // only true if unrestricted attribute exists on parents
+   return context.activeAttributes.indexOf('unrestricted') !== -1;
+});
+attributes.set('unrestricted', function (context) {
+   return true;
+});
+```
+
+The relationship between users and permissions can be expressed as such :
+
+```
+                         +----------------+
+                         |   Attributes   |
+                         +----------------+
+                                 |
+  +-----------+             +---------+             +---------------+
+  |   Users   | ----------- |  Roles  | ----------- |  Permissions  |
+  +-----------+             +---------+             +---------------+
+```
+
+
+## Attributes
+
+. If an attribute fails (returns or resolves with a falsy value, or if an error is thrown), then the role is considered inactive and treated as if not part of the user's membership. A role with no attributes is always active.
+
+When checking permissions, `rbac.check` only allows passing one set of persistent and shared parameters that will be sent to any and all specified roles' attributes. And since attributes are business-specific, it is entirely to the implementing project to manage and handle any such parameters.
+
+Attribute functions may return or resolve with a thruthy value if all conditions succeed, meaning that the role is active for the specified user, or a falsy value if the conditions are not met, meaning that the role is not active for the specified user. If an attribute throws an error, the condition will fail and the role will not be available.
+
+An inactive role discards all inheriting roles for the specified user.
+
+Any uncaught error thrown will emit an `error` event via the `RBAC` instance. The error will be extended with the specified `user`, and current `role`.
+
+An attributes manager may be specified from the constructor, or assigned directly to the prototype.
+
+```javascript
+const rbac1 = new RBAC({
+  attributes: new RBAC.AttributesManager()
+});
+
+// or
+RBAC.prototype.attributes = new RBAC.AttributesManager();
+
+const rbac2 = new RBAC();
+```
+
+**NOTE**: when specifying an attributes manager to the prototype, all instances not specifying their own `AttributesManager` will fall back to that one.
+
+**NOTE**: if not specified, or not set on the prototype, a new instance of `AttributesManager` will be created.
+
+
+### Adding attributes
+
+To add attributes to the attributes manager, simply call the `set` method, passing a named function, or using a string specifying the name of the function handler. The attribute handler should return a `Boolean`, or a `Promise` resolving with a `Boolean`.
+
+```javascript
+function businessHours(context) { ... }
+
+// named function
+rbac.attributes.set(businessHours);
+// or lambda function
+rbac.attributes.set('businessHours', () => { ... }));
+```
+
+**Note**: attributes which throw an error are considered to return `false`.
+
+
+### Removing attributes
+
+Attributes may be removed by value or by name :
+
+```javascript
+rbac.attributes.remove(businessHours);   // removed by function reference
+rbac.attributes.remove('businessHours'); // removed by name
+```
 
 
 ## Grouped permissions
 
-To specify more than one permission for a given rule, it is possible to pass an array, or a comma-separated string of permissions. For example :
+When validating users, it is possible to specify more than one permissions for a given rule, whether from an array, or a comma-separated string of permissions. For example :
 
-```javascript
+```js
 rbac.check(userId, 'list, read').then(...);
 rbac.check(userId, ['post', 'update']).then(...);
 ```
 
-The above example would validate if the user has *any* (i.e. `OR`) of the specified permissions. For cases where users should be valid only if *all* (i.e. `AND`) specified roles, separate each role with the `&&` delimiter.
+The above example would validate if the user has *any* (i.e. `OR`) of the specified permissions. For cases where users should be only valid if *all* (i.e. `AND`) specified conditions are met, separate each permission with the `&&` delimiter.
 
-```javascript
+```js
 rbac.check(userId, 'list&&read&&review').then(...);
 
 // mix OR / AND (all the following are equivalent)
@@ -94,108 +256,77 @@ rbac.check(userId, ['post && update', 'read && delete']).then(...);
 rbac.check(userId, [['post', 'update'], ['read', 'delete']]).then(...);
 ```
 
+**Note:** the following is invalid :
+
+```js
+// not valid (one too many parentheses)
+rbac.check(userId, [[['foo']]]).then(...);
+```
+
 
 ## Providers
 
-Providers are the pluggable core of the RBAC-A system. To validate users against permissions, a provider extending the built-in class `Provider` must be specified. Unlike [attributes](#attributes), providers are mandatory. A provider may be specified from the constructor, or assigned directly to the prototype.
+Providers are the pluggable core of the RBAC-A system. To validate users against permissions, a provider extending the built-in class `Provider` must be specified. Unlike [attributes](#attributes), providers are mandatory. A provider may be specified from the constructor, or assigned directly to the prototype as default value for all `RBAC` instances.
+
+The role of a `Provider` is to :
+
+1. return a hiarerchichal structure (i.e. an `Object`) specifying roles for the given user
+2. return an `Array` of allowed permissions for *any* given role
+3. return an `Array` of attributes for *any* given role
+
+
+The `CustomProvider` instance *must* extend `Provider`. For example :
 
 ```javascript
+const Provider = require('rbac-a').Provider;
+
+class CustomProvider extends Provider {
+  getRoles(user) {
+    return {
+      "root": {
+        "child": null,
+        "subChild": {
+          "base": null
+        }
+      }
+    };
+  }
+
+  getPermissions(role) {
+    return ['read', 'write'];
+  }
+
+  getAttributes(role) {
+    return ['workHours'];
+  }
+}
+
 const rbac1 = new RBAC({
   provider: new CustomProvider()
 });
 
-// or
+// or globally
 RBAC.prototype.provider = new CustomProvider();
-
 const rbac2 = new RBAC();
 ```
 
 **NOTE**: when specifying a provider to the prototype, all instances not specifying their own `Provider` will fall back to that one.
 
-The `CustomProvider` instance must extend `Provider`. For example :
-
-```javascript
-'use strict';
-
-const Provider = require('rbac-a').Provider;
-
-class CustomProvider extends Provider {
-
-  /**
-  Return all the roles available for the given user. The return value
-  must be an object, recursively defining the associated roles for the
-  specified user. Return an empty object if user has no roles.
-
-  Ex: {
-        "role1": {
-          "role1.1": null,
-          "role1.2": { ... },
-          ...
-        },
-        "secondary": ...,
-        ...
-      }
-
-  The method mey return a promise resolving with the
-  expected return value.
-
-  @param use {mixed}
-  @return {Object<string,number>}
-  */
-  getRoles(user) {
-    return {};   // TODO : implement stub
-  }
-
-  /**
-  Return all permissions for the specified role. The return value
-  must be an array. Return an empty array if role is missing or
-  no permission for the specified role.
-
-  Ex: ['permission1', 'permission2', ... ]
-
-  The method mey return a promise resolving with the
-  expected return value.
-
-  @param role {mixed}
-  @return {Array<string>}
-  */
-  getPermissions(role) {
-    return [];   // TODO : implement stub
-  }
-
-  /**
-  Return all attributes for the specified role. The return value must
-  be an array. Return an empty array if role is missing or if no
-  attributes for the specified role.
-
-  Ex: ['attribute1', 'attribute2', ... ]
-
-  The method mey return a promise resolving with the
-  expected return value.
-
-  @param role {mixed}
-  @return {Array<string>}
-  */
-  getAttributes(role) {
-    return [];   // TODO : implement stub
-  }
-
-}
-```
-
-When hybrid systems require more complex providers, a composed one may be implemented. For example :
+When hybrid systems requiring more complex providers, a custom provider may compose other providers and validate against both of them simultaneously. For example :
 
 ```javascript
 class CompositeProvider extends Provider {
 
   constructor(options) {
-    this.json = new JsonProvider(options.rulesObject);
-    this.custom = new CustomProvider(options);
+    this.json = new JsonProvider(options.jsonData);
+    this.custom = new CustomProvider(options.customData);
   }
 
   getRoles(user) {
-    // NOTE : ignore JSON provider, here
-    return this.custom.getRoles(user);
+    const jsonRoles = this.json.getRoles(user);
+    const customRoles = this.custom.getRoles(user);
+
+    return merge(jsonRoles, customRoles);
   }
 
   getPermissions(role) {
@@ -203,15 +334,18 @@ class CompositeProvider extends Provider {
       this.json.getPermissions(role),
       this.custom.getPermissions(role)
     ]).then(function (permissionLists) {
-      var jsonPermissions = permissionLists[0] || [];
-      var customPermissions = permissionLists[1] || [];
-      return jsonPermissions.push.apply(jsonPermissions, customPermissions);
+      const jsonPermissions = permissionLists[0] || [];
+      const customPermissions = permissionLists[1] || [];
+
+      return concat( jsonPermissions, customPermissions );
     });
   }
 
   getAttributes(role) {
-    // NOTE : ignore custom provider, here
-    return this.json.getAttributes(role);
+    const jsonAttributes = this.json.getAttributes(role) || [];
+    const customAttributes = this.custom.getAttributes(role) || [];
+
+    return concat( jsonAttributes, customAttributes );
   }
 }
 ```
@@ -268,57 +402,19 @@ The JSON should have the following format, for example :
 }
 ```
 
-## Attributes
+When calling `getRoles(user)`, the provider will construct the hierarchichal roles from the definition.
 
-Attributes determine if a role is active or not. If an attribute fails (returns or resolves with a falsy value, or if an error is thrown), then the role is considered inactive and treated as if not part of the user's membership. A role with no attributes is always active.
+For example: 
 
-When checking permissions, `rbac.check` only allows passing one set of persistent and shared parameters that will be sent to any and all specified roles' attributes. And since attributes are business-specific, it is entirely to the implementing project to manage and handle any such parameters.
-
-Attribute functions may return or resolve with a thruthy value if all conditions succeed, meaning that the role is active for the specified user, or a falsy value if the conditions are not met, meaning that the role is not active for the specified user. If an attribute throws an error, the condition will fail and the role will not be available.
-
-An inactive role discards all inheriting roles for the specified user.
-
-Any uncaught error thrown will emit an `error` event via the `RBAC` instance. The error will be extended with the specified `user`, and current `role`.
-
-An attributes manager may be specified from the constructor, or assigned directly to the prototype.
-
-```javascript
-const rbac1 = new RBAC({
-  attributes: new RBAC.AttributesManager()
-});
-
-// or
-RBAC.prototype.attributes = new RBAC.AttributesManager();
-
-const rbac2 = new RBAC();
-```
-
-**NOTE**: when specifying an attributes manager to the prototype, all instances not specifying their own `AttributesManager` will fall back to that one.
-
-**NOTE**: if not specified, or not set on the prototype, a new instance of `AttributesManager` will be created.
-
-
-### Adding attributes
-
-To add attributes to the attributes manager, simply call the `set` method, passing a named function. The function name is the attribute name.
-
-```javascript
-function businessHours(user, role, params) {
-  return /* ... */;
-}
-
-rbac.attributes.set(businessHours);
-```
-
-Attributes may return a `Promise` if they require asynchronous validation.
-
-### Removing attributes
-
-Attributes may be removed by value or by name :
-
-```javascript
-rbac.attributes.remove('businessHours');
-rbac.attributes.remove(businessHours);
+```js
+jsonProvider.getRoles('john.smith');
+// -> {
+//       "writer": {
+//         "reader": {
+//           "guest": null
+//         } 
+//      }
+//    }
 ```
 
 

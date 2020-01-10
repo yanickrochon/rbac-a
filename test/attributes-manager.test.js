@@ -16,11 +16,11 @@ describe('Test Attributes Manager', function () {
     });
 
     it('should initialize with empty attributes', function () {
-      attributes._attributes.should.eql({});
+      expect( attributes._attributes ).toEqual({});
     });
 
     it('should validate to false', function () {
-      attributes.validate('test').should.be.false;
+      expect( attributes.validate('test') ).toBeFalsy();
     });
 
   });
@@ -38,9 +38,11 @@ describe('Test Attributes Manager', function () {
     });
 
     it('should add attribute', function () {
-      attributes._attributes.should.not.have.ownProperty('addedProperty');
+      expect( attributes._attributes ).not.toHaveProperty('addedProperty');
 
-      attributes.set(function addedProperty() {})._attributes.should.have.ownProperty('addedProperty').be.instanceOf(Function);
+      expect( attributes.set(function addedProperty() {})._attributes ).toHaveProperty('addedProperty');
+      expect( attributes._attributes.addedProperty ).toBeInstanceOf(Function);
+
     });
 
     it('should fail with invalid attribute type', function () {
@@ -49,12 +51,12 @@ describe('Test Attributes Manager', function () {
         NaN, -1, 0, 1, Infinity, '', 'Hello',
         /./, new Date(), {}, []
       ].forEach(function (attr) {
-        (function () { attributes.set(attr); }).should.throw('Attribute should be a function');
+        expect(function () { attributes.set(attr); }).toThrow('Attribute handler should be a function');
       });
     });
 
     it('should fail with anonymous attributes', function () {
-      (function () { attributes.set(function () {}); }).should.throw('Attribute cannot be anonymous');
+      expect(function () { attributes.set(function () {}); }).toThrow('Attribute cannot be anonymous or empty');
     });
 
     it('should remove attributes by name', function () {
@@ -63,12 +65,14 @@ describe('Test Attributes Manager', function () {
 
       attributes.set(dummyValidator);
 
-      attributes._attributes.should.not.have.ownProperty('removePropertyByName');
-      attributes.set(removePropertyByName)._attributes.should.have.ownProperty('removePropertyByName').be.instanceOf(Function);
-      attributes.remove('removePropertyByName').should.equal(removePropertyByName);
-      attributes._attributes.should.not.have.ownProperty('removePropertyByName');
+      expect( attributes._attributes ).not.toHaveProperty('removePropertyByName');
+      expect( attributes.set(removePropertyByName)._attributes ).toHaveProperty('removePropertyByName' );
+      expect( attributes._attributes.removePropertyByName ).toBeInstanceOf(Function);
+      expect( attributes.remove('removePropertyByName') ).toEqual(removePropertyByName);
+      expect( attributes._attributes ).not.toHaveProperty('removePropertyByName');
 
-      attributes._attributes.should.have.ownProperty('dummyValidator').be.instanceOf(Function);
+      expect( attributes._attributes ).toHaveProperty('dummyValidator');
+      expect( attributes._attributes.dummyValidator ).toBeInstanceOf(Function);
     });
 
     it('should remove attributes by value', function () {
@@ -77,12 +81,14 @@ describe('Test Attributes Manager', function () {
 
       attributes.set(dummyValidator);
 
-      attributes._attributes.should.not.have.ownProperty('removePropertyByValue');
-      attributes.set(removePropertyByValue)._attributes.should.have.ownProperty('removePropertyByValue').be.instanceOf(Function);
-      attributes.remove(removePropertyByValue).should.equal(removePropertyByValue);
-      attributes._attributes.should.not.have.ownProperty('removePropertyByValue');
+      expect( attributes._attributes ).not.toHaveProperty('removePropertyByValue');
+      expect( attributes.set(removePropertyByValue)._attributes ).toHaveProperty('removePropertyByValue');
+      expect( attributes._attributes.removePropertyByValue ).toBeInstanceOf(Function);
+      expect( attributes.remove(removePropertyByValue) ).toEqual(removePropertyByValue);
+      expect( attributes._attributes ).not.toHaveProperty('removePropertyByValue');
 
-      attributes._attributes.should.have.ownProperty('dummyValidator').be.instanceOf(Function);
+      expect( attributes._attributes ).toHaveProperty('dummyValidator');
+      expect( attributes._attributes.dummyValidator ).toBeInstanceOf(Function);
     });
 
     it('should fail with invalid attribute type', function () {
@@ -91,7 +97,7 @@ describe('Test Attributes Manager', function () {
         NaN, -1, 0, 1, Infinity,
         /./, new Date(), {}, []
       ].forEach(function (attr) {
-        (function () { attributes.remove(attr); }).should.throw('Attribute must be a string or a function');
+        expect(function () { attributes.remove(attr); }).toThrow('Attribute must be a string or a function');
       });
     });
 
@@ -113,19 +119,26 @@ describe('Test Attributes Manager', function () {
       const user = 123;
       const role = 'test';
       const params = { foo: 'bar' };
+
+      const context = {
+        user: user,
+        role: role,
+        params: params
+      };
+
       const validated = 'validated';
 
-      function attributeValidator(u, r, p) {
-        user.should.equal(u);
-        role.should.equal(r);
-        params.should.equal(p);
+      function attributeValidator(context) {
+        expect( user ).toEqual(context.user);
+        expect( role ).toEqual(context.role);
+        expect( params ).toEqual(context.params);
 
         return validated;
       }
 
       attributes.set(attributeValidator);
 
-      attributes.validate('attributeValidator', user, role, params).should.equal(validated);
+      expect( attributes.validate('attributeValidator', context) ).toEqual(validated);
     });
 
     it('should fail with invalid type', function () {
@@ -134,16 +147,24 @@ describe('Test Attributes Manager', function () {
         NaN, -1, 0, 1, Infinity,
         /./, new Date(), {}, []
       ].forEach(function (attr) {
-        (function () { attributes.validate(attr); }).should.throw('Attribute should be a string');
+        expect(function () { attributes.validate(attr); }).toThrow('Attribute should be a string');
       });
     });
 
     it('should fail with empty attribute name', function () {
-      (function () { attributes.validate(''); }).should.throw('Attribute name cannot be empty');
+      expect(function () { attributes.validate(''); }).toThrow('Attribute name cannot be empty');
     });
 
     it('should ignore missing attributes', function () {
-      attributes.validate('missingAttribute').should.equal(false);
+      attributes._options.ignoreMissingAttributes = true;
+
+      expect( attributes.validate('missingAttribute') ).toEqual(false);
+    });
+
+    it('should throw on missing attributes', function () {
+      attributes._options.ignoreMissingAttributes = false;
+
+      expect(function () { attributes.validate('missingAttribute'); }).toThrow('Unknown attribute : missingAttribute');
     });
 
   });

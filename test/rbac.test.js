@@ -21,7 +21,7 @@ describe('Test RBAC', function () {
     });
 
     it('should extend standard EventEmitter', function () {
-      rbac.should.be.instanceOf(EventEmitter);
+      expect( rbac ).toBeInstanceOf(EventEmitter);
     });
 
   });
@@ -30,9 +30,9 @@ describe('Test RBAC', function () {
   describe('Testing constructor', function () {
 
     it('should fail with missing Provider', function () {
-      (RBAC.prototype.provider === null).should.be.true();
+      expect( RBAC.prototype.provider === null ).toBeTruthy();
 
-      (function () { new RBAC(); }).should.throw('Invalid or missing provider');
+      expect(function () { new RBAC(); }).toThrow('Invalid or missing provider');
     });
 
     it('should fail with invalid or missing Provider', function () {
@@ -42,7 +42,7 @@ describe('Test RBAC', function () {
         '', 'Foo',
         function () {}, {}, [], /./, new Date(), Promise.resolve()
       ].forEach(function (provider) {
-        (function () { new RBAC({ provider: provider }); }).should.throw('Invalid or missing provider');
+        expect(function () { new RBAC({ provider: provider }); }).toThrow('Invalid or missing provider');
       });
     });
 
@@ -53,7 +53,7 @@ describe('Test RBAC', function () {
         '', 'Foo',
         function () {}, {}, [], /./, new Date(), Promise.resolve()
       ].forEach(function (attrManager) {
-        (function () { new RBAC({ provider: new Provider(), attributes: attrManager }); }).should.throw('Invalid attributes manager');
+        expect(function () { new RBAC({ provider: new Provider(), attributes: attrManager }); }).toThrow('Invalid attributes manager');
       });
     });
 
@@ -77,8 +77,8 @@ describe('Test RBAC', function () {
       let rbac1 = new RBAC();
       let rbac2 = new RBAC();
 
-      rbac1.provider.should.equal(provider);
-      rbac1.provider.should.equal(rbac2.provider);
+      expect( rbac1.provider ).toEqual(provider);
+      expect( rbac1.provider ).toEqual(rbac2.provider);
 
       RBAC.prototype.provider = defaultProvider;
     });
@@ -91,7 +91,8 @@ describe('Test RBAC', function () {
     it('should create default attribute manager', function () {
       let rbac = new RBAC({ provider: new Provider() });
 
-      rbac.attributes.should.be.instanceOf(AttributesManager);
+      expect( rbac.attributes ).toBeInstanceOf(AttributesManager);
+
     });
 
     it('should allow setting custom attributes manager', function () {
@@ -100,8 +101,8 @@ describe('Test RBAC', function () {
       let rbac1 = new RBAC({ provider: new Provider() });
       let rbac2 = new RBAC({ provider: new Provider(), attributes: attributes });
 
-      rbac1.attributes.should.not.equal(rbac2.attributes);
-      rbac2.attributes.should.equal(attributes);
+      expect( rbac1.attributes ).not.toBe(rbac2.attributes);
+      expect( rbac2.attributes ).toBe(attributes);
     });
 
     it('should create standardized instances', function () {
@@ -113,8 +114,8 @@ describe('Test RBAC', function () {
       let rbac1 = new RBAC({ provider: new Provider() });
       let rbac2 = new RBAC({ provider: new Provider() });
 
-      rbac1.attributes.should.equal(attributes);
-      rbac1.attributes.should.equal(rbac2.attributes);
+      expect( rbac1.attributes ).toEqual(attributes);
+      expect( rbac1.attributes ).toEqual(rbac2.attributes);
 
       RBAC.prototype.attributes = defaultAttributes;
     });
@@ -131,7 +132,7 @@ describe('Test RBAC', function () {
         this.testUser = testUser;
       }
       getRoles(user) {
-        user.should.equal(this.testUser);
+        expect( user ).toEqual(this.testUser);
         return {
           'tester': {
             'dummy': null
@@ -163,10 +164,10 @@ describe('Test RBAC', function () {
       provider.getAttributes = function () {};  // ignore attributes
 
       return rbac.check(testUser, 'test').then(function (priority) {
-        priority.should.equal(1);
+        expect( priority ).toEqual(1);
       }).then(function () {
         return rbac.check(testUser, 'idle').then(function (priority) {
-          priority.should.equal(2);
+          expect( priority ).toEqual(2);
         });
       });
     });
@@ -179,10 +180,10 @@ describe('Test RBAC', function () {
       provider.getAttributes = function () {};  // ignore attributes
 
       return rbac.check(testUser, 'test').then(function (priority) {
-        priority.should.equal(1);
+        expect( priority ).toEqual(1);
       }).then(function () {
         return rbac.check(testUser, 'idle').then(function (priority) {
-          priority.should.equal(2);
+          expect( priority ).toEqual(2);
         });
       });
     });
@@ -192,18 +193,18 @@ describe('Test RBAC', function () {
       const provider = new MockProvider(testUser);
       const rbac = new RBAC({ provider: provider });
 
-      rbac.attributes.set(function testAttribute(user, role, params) {
-        user.should.equal('tester');
-        role.should.equal('tester');
-        (typeof params).should.equal('undefined');
+      rbac.attributes.set(function testAttribute(context) {
+        expect( context.user ).toEqual('tester');
+        expect( context.role ).toEqual('tester');
+        expect( context.params ).toEqual( {} );
         return false;
       });
 
       return rbac.check(testUser, 'test').then(function (priority) {
-        priority.should.be.NaN();
+        expect( priority ).toBeNaN();
       }).then(function () {
         return rbac.check(testUser, 'idle').then(function (priority) {
-        priority.should.be.NaN();
+        expect( priority ).toBeNaN();
         });
       });
     });
@@ -216,46 +217,46 @@ describe('Test RBAC', function () {
       let testAttrCalled = false;
       let dummyAttrCalled = false;
 
-      rbac.attributes.set(function testAttribute(user, role, params) {
-        user.should.equal('tester');
-        role.should.equal('tester');
-        params.should.equal(testParams);
+      rbac.attributes.set(function testAttribute(context) {
+        expect( context.user ).toEqual('tester');
+        expect( context.role ).toEqual('tester');
+        expect( context.params ).toEqual(testParams);
         testAttrCalled = true;
         return true;
       });
 
-      rbac.attributes.set(function dummyAttribute(user, role, params) {
-        user.should.equal('tester');
-        role.should.equal('dummy');
-        params.should.equal(testParams);
+      rbac.attributes.set(function dummyAttribute(context) {
+        expect( context.user ).toEqual('tester');
+        expect( context.role ).toEqual('dummy');
+        expect( context.params ).toEqual(testParams);
         dummyAttrCalled = true;
         return true;
       });
 
       return rbac.check(testUser, 'test', testParams).then(function (priority) {
-        priority.should.equal(1);
+        expect( priority ).toEqual(1);
 
-        testAttrCalled.should.be.true();
+        expect( testAttrCalled ).toBeTruthy();
 
         return rbac.check(testUser, ['test'], testParams).then(function (priority) {
-          priority.should.equal(1);
+          expect( priority ).toEqual(1);
 
           return rbac.check(testUser, [['test']], testParams).then(function (priority) {
-            priority.should.equal(1);
+            expect( priority ).toEqual(1);
           });
         });
       }).then(function () {
 
         return rbac.check(testUser, 'idle', testParams).then(function (priority) {
-          priority.should.equal(2);
+          expect( priority ).toEqual(2);
 
-          dummyAttrCalled.should.be.true();
+          expect( dummyAttrCalled ).toBeTruthy();
 
           return rbac.check(testUser, 'idle', testParams).then(function (priority) {
-            priority.should.equal(2);
+            expect( priority ).toEqual(2);
 
             return rbac.check(testUser, 'idle', testParams).then(function (priority) {
-              priority.should.equal(2);
+              expect( priority ).toEqual(2);
             });
           });
         });
@@ -270,10 +271,10 @@ describe('Test RBAC', function () {
       provider.getAttributes = function () {};  // ignore attributes
 
       return rbac.check(testUser, 'test, missing').then(function (priority) {
-        priority.should.equal(1);
+        expect( priority ).toEqual(1);
       }).then(function () {
         return rbac.check(testUser, 'idle, missing').then(function (priority) {
-          priority.should.equal(2);
+          expect( priority ).toEqual(2);
         });
       });
     });
@@ -286,7 +287,7 @@ describe('Test RBAC', function () {
       provider.getAttributes = function () {};  // ignore attributes
 
       return rbac.check(testUser, 'test && idle').then(function (priority) {
-        priority.should.equal(1);
+        expect( priority ).toEqual(1);
       });
     });
 
@@ -302,10 +303,10 @@ describe('Test RBAC', function () {
       };
 
       return rbac.check(testUser, 'bar').then(function (priority) {
-        priority.should.be.NaN();
+        expect( priority ).toBeNaN();
       }).then(function () {
         return rbac.check(testUser, 'test && missing').then(function (priority) {
-          priority.should.be.NaN();
+          expect( priority ).toBeNaN();
         });
       });
     });
@@ -318,7 +319,7 @@ describe('Test RBAC', function () {
       provider.getAttributes = function () {};  // ignore attributes
 
       return rbac.check(testUser, 'missing').then(function (priority) {
-        priority.should.be.NaN();
+        expect( priority ).toBeNaN();
       });
     });
 
@@ -341,12 +342,12 @@ describe('Test RBAC', function () {
       });
 
       return rbac.check('tester', 'test').then(function (priority) {
-        priority.should.be.NaN();
+        expect( priority ).toBeNaN();
 
-        errorThrown.should.be.true();
+        expect( errorThrown ).toBeTruthy();
 
         return rbac.check('missingUser', 'test').then(function (priority) {
-          priority.should.be.NaN();
+          expect( priority ).toBeNaN();
         });
       });
     });
@@ -377,12 +378,12 @@ describe('Test RBAC', function () {
       });
 
       return rbac.check('tester', 'test').then(function (priority) {
-        priority.should.be.NaN();
+        expect( priority ).toBeNaN();
 
-        errorThrown.should.be.true();
+        expect( errorThrown ).toBeTruthy();
 
         return rbac.check('missingUser', 'test').then(function (priority) {
-          priority.should.be.NaN();
+          expect( priority ).toBeNaN();
         });
       });
     });
@@ -415,9 +416,9 @@ describe('Test RBAC', function () {
       });
 
       return rbac.check(testUser, 'test').then(function (priority) {
-        priority.should.be.NaN();
+        expect( priority ).toBeNaN();
 
-        errorThrown.should.be.true();
+        expect( errorThrown ).toBeTruthy();
       });
     });
 
@@ -433,24 +434,24 @@ describe('Test RBAC', function () {
 
       // simple permission
       invalid.forEach(function (permissions) {
-        (function invalidPermission() { rbac.check('user', permissions); }).should.throw();
+        expect(function invalidPermission() { rbac.check('user', permissions); }).toThrow();
       });
 
       // permission group (OR)
-      (function invalidPermissionGroup() { rbac.check('user', ''); }).should.throw();
-      (function invalidPermissionGroup() { rbac.check('user', ','); }).should.throw();
-      (function invalidPermissionGroup() { rbac.check('user', []); }).should.throw();
+      expect(function invalidPermissionGroup() { rbac.check('user', ''); }).toThrow();
+      expect(function invalidPermissionGroup() { rbac.check('user', ','); }).toThrow();
+      expect(function invalidPermissionGroup() { rbac.check('user', []); }).toThrow();
       invalid.forEach(function (permissions) {
-        (function invalidPermissionGroup() { rbac.check('user', [permissions]); }).should.throw();
-        (function invalidPermissionGroup() { rbac.check('user', [permissions,permissions]); }).should.throw();
+        expect(function invalidPermissionGroup() { rbac.check('user', [permissions]); }).toThrow();
+        expect(function invalidPermissionGroup() { rbac.check('user', [permissions,permissions]); }).toThrow();
       });
 
       // permission group (AND)
-      (function invalidPermissionGroup() { rbac.check('user', '&&'); }).should.throw();
-      (function invalidPermissionGroup() { rbac.check('user', ['&&']); }).should.throw();
+      expect(function invalidPermissionGroup() { rbac.check('user', '&&'); }).toThrow();
+      expect(function invalidPermissionGroup() { rbac.check('user', ['&&']); }).toThrow();
       invalid.forEach(function (permissions) {
-        (function invalidPermissionGroup() { rbac.check('user', [[permissions]]); }).should.throw();
-        (function invalidPermissionGroup() { rbac.check('user', [[permissions,permissions]]); }).should.throw();
+        expect(function invalidPermissionGroup() { rbac.check('user', [[permissions]]); }).toThrow();
+        expect(function invalidPermissionGroup() { rbac.check('user', [[permissions,permissions]]); }).toThrow();
       });
     });
 
