@@ -1,6 +1,6 @@
 # RBAC-A
 
-[![Build Status](https://travis-ci.org/yanickrochon/rbac-a.svg)](https://travis-ci.org/yanickrochon/rbac-a)
+[![Build Status](https://travis-ci.org/yanickrochon/rbac-a.svg?branch=master)](https://travis-ci.org/yanickrochon/rbac-a)
 [![Coverage Status](https://coveralls.io/repos/yanickrochon/rbac-a/badge.svg?branch=master)](https://coveralls.io/r/yanickrochon/rbac-a?branch=master)
 
 [![NPM](https://nodei.co/npm/rbac-a.png?compact=true)](https://nodei.co/npm/rbac-a/)
