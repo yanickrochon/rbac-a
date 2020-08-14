@@ -7,6 +7,10 @@
 
 Role Based Access Control with Attributes and dynamic plugin roles implementation. This module follows the [NIST RBAC model](http://en.wikipedia.org/wiki/NIST_RBAC_model) and offer a flexible solution to allow or restrict user operations.
 
+# !!IMPORTATNT!!
+
+Please be advised that this repository is no longer being maintained. Please visit [this repository](https://gitlab.com/yanfoo/rbac-a) for a complete rewrite as the version 2.0 of this module, also published under a different namespace so it will not lead to confusions.
+
 
 ## Breaking change between 0.x and 1.x
 
